@@ -1,0 +1,107 @@
+/**api-test.wxss - API测试页面样式**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: hidden;
+}
+
+.test-container {
+  padding: 40rpx;
+}
+
+.test-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #2d3748;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.test-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.test-btn {
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+}
+
+.test-btn[disabled] {
+  background: #cbd5e0;
+  color: #a0aec0;
+}
+
+.clear-btn {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.clear-btn[disabled] {
+  background: #cbd5e0;
+  color: #a0aec0;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.test-result {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 40rpx;
+  box-shadow: 0 4rpx 20rpx rgba(102, 126, 234, 0.1);
+}
+
+.result-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 20rpx;
+}
+
+.result-text {
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.test-tips {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 20rpx rgba(102, 126, 234, 0.1);
+}
+
+.tips-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 20rpx;
+}
+
+.tips-item {
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.6;
+  margin-bottom: 12rpx;
+}

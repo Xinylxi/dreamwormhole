@@ -1,0 +1,155 @@
+<!--planet-explore.wxml - 3D星球探索页面-->
+<navigation-bar title="星球探索" back="{{true}}" homeButton="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack" bind:home="goToHome"></navigation-bar>
+
+<view class="explore-container">
+  <!-- 3D星球展示区域 -->
+  <view class="planet-3d-container">
+    <view class="planet-3d" 
+          style="transform: scale({{scale}}) rotateX({{rotationX}}deg) rotateY({{rotationY}}deg) rotateZ({{rotationZ}}deg);"
+          bindtouchstart="onTouchStart"
+          bindtouchmove="onTouchMove"
+          bindtouchend="onTouchEnd">
+      
+      <!-- 星球主体 -->
+      <view class="planet-core" style="background: {{planetColor}};">
+        <!-- 星球表面纹理 -->
+        <view class="planet-surface">
+          <view class="surface-texture"></view>
+          <view class="surface-texture surface-texture-2"></view>
+          <view class="surface-texture surface-texture-3"></view>
+          <view class="surface-texture surface-texture-4"></view>
+        </view>
+        
+        <!-- 星球大气层 -->
+        <view class="planet-atmosphere">
+          <view class="atmosphere-layer atmosphere-1"></view>
+          <view class="atmosphere-layer atmosphere-2"></view>
+          <view class="atmosphere-layer atmosphere-3"></view>
+          <view class="atmosphere-layer atmosphere-4"></view>
+        </view>
+        
+        <!-- 星球光环 -->
+        <view class="planet-ring">
+          <view class="ring-segment ring-1"></view>
+          <view class="ring-segment ring-2"></view>
+          <view class="ring-segment ring-3"></view>
+          <view class="ring-segment ring-4"></view>
+        </view>
+        
+        <!-- 星球emoji -->
+        <view class="planet-emoji">{{planetEmoji}}</view>
+        
+        <!-- 星球光晕效果 -->
+        <view class="planet-aura"></view>
+      </view>
+      
+      <!-- 星球轨道 -->
+      <view class="planet-orbit">
+        <view class="orbit-line"></view>
+        <view class="orbit-dots">
+          <view class="orbit-dot" wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this"></view>
+        </view>
+      </view>
+      
+      <!-- 星空背景 -->
+      <view class="starfield">
+        <view class="star" wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]}}" wx:key="*this" style="top: {{item * 7}}%; left: {{item * 6}}%;"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 星球信息面板 -->
+  <view class="planet-info-panel">
+    <view class="planet-title">{{planetName}}</view>
+    <view class="planet-desc">{{planetDescription}}</view>
+    <view class="planet-stats">
+      <view class="stat-item">
+        <text class="stat-number">{{dreamCount}}</text>
+        <text class="stat-label">个梦境</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 控制面板 -->
+  <view class="control-panel">
+    <!-- 旋转控制 -->
+    <view class="control-section">
+      <view class="control-title">旋转控制</view>
+      <view class="control-buttons">
+        <button class="control-btn {{isRotating ? 'active' : ''}}" bindtap="toggleRotation">
+          <text class="btn-icon">{{isRotating ? '⏸️' : '▶️'}}</text>
+          <text>{{isRotating ? '暂停' : '旋转'}}</text>
+        </button>
+        <button class="control-btn" bindtap="resetView">
+          <text class="btn-icon">🔄</text>
+          <text>重置</text>
+        </button>
+      </view>
+      
+      <!-- 旋转速度控制 -->
+      <view class="slider-container">
+        <text class="slider-label">旋转速度</text>
+        <slider class="rotation-slider" 
+                min="0" 
+                max="5" 
+                step="0.5" 
+                value="{{rotationSpeed}}"
+                bindchange="adjustRotationSpeed"
+                activeColor="#667eea"
+                backgroundColor="rgba(255,255,255,0.2)"
+                block-color="#667eea"
+                block-size="20"/>
+      </view>
+    </view>
+
+    <!-- 缩放控制 -->
+    <view class="control-section">
+      <view class="control-title">缩放控制</view>
+      <view class="control-buttons">
+        <button class="control-btn" bindtap="zoomOut">
+          <text class="btn-icon">🔍-</text>
+          <text>缩小</text>
+        </button>
+        <button class="control-btn" bindtap="zoomIn">
+          <text class="btn-icon">🔍+</text>
+          <text>放大</text>
+        </button>
+      </view>
+      
+      <!-- 当前缩放比例显示 -->
+      <view class="scale-display">
+        <text class="scale-text">缩放: {{Math.round(scale * 100)}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 梦境列表 -->
+  <view class="dreams-panel" wx:if="{{dreams.length > 0}}">
+    <view class="panel-title">星球梦境</view>
+    <scroll-view class="dreams-scroll" scroll-y>
+      <view class="dream-item" 
+            wx:for="{{dreams}}" 
+            wx:key="id"
+            bindtap="viewDreamDetail"
+            data-dream-id="{{item._id}}">
+        <view class="dream-date">{{item.date}}</view>
+        <view class="dream-preview">{{item.content}}</view>
+        <view class="dream-tags" wx:if="{{item.tags && item.tags.length > 0}}">
+          <text class="dream-tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 操作提示 -->
+  <view class="operation-hints">
+    <view class="hint-item">
+      <text class="hint-icon">👆</text>
+      <text class="hint-text">单指拖拽旋转星球</text>
+    </view>
+    <view class="hint-item">
+      <text class="hint-icon">🤏</text>
+      <text class="hint-text">双指缩放星球</text>
+    </view>
+  </view>
+</view>

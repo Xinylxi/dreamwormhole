@@ -1,0 +1,189 @@
+<!--analytics.wxml - 梦境统计分析页面-->
+<navigation-bar title="梦境统计" back="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在分析梦境数据...</text>
+  </view>
+
+  <!-- 主要内容 -->
+  <view class="content" wx:else>
+    <!-- 顶部概览卡片 -->
+    <view class="overview-section">
+      <view class="overview-title">梦境概览</view>
+      <view class="overview-grid">
+        <view class="overview-card">
+          <view class="card-icon">📚</view>
+          <view class="card-content">
+            <text class="card-value">{{totalDreams}}</text>
+            <text class="card-label">总梦境数</text>
+          </view>
+        </view>
+        <view class="overview-card">
+          <view class="card-icon">🪐</view>
+          <view class="card-content">
+            <text class="card-value">{{totalPlanets}}</text>
+            <text class="card-label">星球种类</text>
+          </view>
+        </view>
+        <view class="overview-card">
+          <view class="card-icon">📅</view>
+          <view class="card-content">
+            <text class="card-value">{{thisWeekDreams}}</text>
+            <text class="card-label">本周梦境</text>
+          </view>
+        </view>
+        <view class="overview-card">
+          <view class="card-icon">📊</view>
+          <view class="card-content">
+            <text class="card-value">{{thisMonthDreams}}</text>
+            <text class="card-label">本月梦境</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 时间筛选 -->
+    <view class="filter-section">
+      <view class="filter-title">时间范围：{{selectedPeriod}}</view>
+      <view class="filter-buttons">
+        <button class="filter-btn {{timeFilter === 'all' ? 'active' : ''}}" bindtap="onTimeFilterChange" data-filter="all">全部</button>
+        <button class="filter-btn {{timeFilter === 'week' ? 'active' : ''}}" bindtap="onTimeFilterChange" data-filter="week">7天</button>
+        <button class="filter-btn {{timeFilter === 'month' ? 'active' : ''}}" bindtap="onTimeFilterChange" data-filter="month">30天</button>
+        <button class="filter-btn {{timeFilter === 'year' ? 'active' : ''}}" bindtap="onTimeFilterChange" data-filter="year">一年</button>
+      </view>
+    </view>
+
+    <!-- 情绪分布图表 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">情绪分布</text>
+        <text class="section-desc">您的梦境情绪分析</text>
+      </view>
+      <view class="emotion-chart" wx:if="{{emotionChart.length > 0}}">
+        <view class="chart-item" wx:for="{{emotionChart}}" wx:key="name">
+          <view class="chart-label">
+            <text class="emotion-name">{{item.name}}</text>
+            <text class="emotion-count">{{item.count}}次</text>
+          </view>
+          <view class="chart-bar">
+            <view class="bar-fill" style="width: {{item.percentage}}%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);"></view>
+          </view>
+          <text class="percentage">{{item.percentage}}%</text>
+        </view>
+      </view>
+      <view class="empty-chart" wx:else>
+        <text class="empty-icon">😴</text>
+        <text class="empty-text">暂无情绪数据</text>
+      </view>
+    </view>
+
+    <!-- 星球分布图表 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">星球分布</text>
+        <text class="section-desc">梦境星球类型统计</text>
+      </view>
+      <view class="planet-chart" wx:if="{{planetChart.length > 0}}">
+        <view class="planet-item" wx:for="{{planetChart}}" wx:key="name">
+          <view class="planet-info">
+            <text class="planet-emoji">🌌</text>
+            <view class="planet-details">
+              <text class="planet-name">{{item.name}}</text>
+              <text class="planet-count">{{item.count}}个梦境</text>
+            </view>
+          </view>
+          <view class="planet-bar">
+            <view class="bar-fill" style="width: {{item.percentage}}%; background: linear-gradient(90deg, #ff6b6b 0%, #ee5a52 100%);"></view>
+          </view>
+          <text class="percentage">{{item.percentage}}%</text>
+        </view>
+      </view>
+      <view class="empty-chart" wx:else>
+        <text class="empty-icon">🪐</text>
+        <text class="empty-text">暂无星球数据</text>
+      </view>
+    </view>
+
+    <!-- 梦境时间分布 -->
+    <view class="chart-section">
+      <view class="section-header">
+        <text class="section-title">作梦时间分布</text>
+        <text class="section-desc">您通常在什么时候做梦</text>
+      </view>
+      <view class="time-chart" wx:if="{{timeChart.length > 0}}">
+        <view class="time-bars">
+          <view class="time-bar" wx:for="{{timeChart}}" wx:key="hour" style="height: {{item.count * 10}}rpx;">
+            <view class="bar-tooltip">{{item.count}}次</view>
+          </view>
+        </view>
+        <view class="time-labels">
+          <text class="time-label" wx:for="{{timeChart}}" wx:key="hour">{{item.hour}}</text>
+        </view>
+      </view>
+      <view class="empty-chart" wx:else>
+        <text class="empty-icon">🕐</text>
+        <text class="empty-text">暂无时间数据</text>
+      </view>
+    </view>
+
+    <!-- 梦境趋势 -->
+    <view class="trend-section">
+      <view class="section-header">
+        <text class="section-title">梦境趋势</text>
+        <text class="section-desc">最近30天梦境记录趋势</text>
+      </view>
+      <view class="trend-chart" wx:if="{{dreamTrend.length > 0}}">
+        <view class="trend-line">
+          <view class="trend-point" wx:for="{{dreamTrend}}" wx:key="date"
+                style="{{item.style}}">
+            <view class="point-dot"></view>
+            <view class="point-tooltip">{{item.count}}</view>
+          </view>
+        </view>
+        <view class="trend-labels">
+          <text class="trend-label">{{dreamTrend[0].date}}</text>
+          <text class="trend-label center">{{dreamTrend[Math.floor(dreamTrend.length/2)].date}}</text>
+          <text class="trend-label right">{{dreamTrend[dreamTrend.length-1].date}}</text>
+        </view>
+      </view>
+      <view class="empty-chart" wx:else>
+        <text class="empty-icon">📈</text>
+        <text class="empty-text">暂无趋势数据</text>
+      </view>
+    </view>
+
+    <!-- 热门标签 -->
+    <view class="tags-section">
+      <view class="section-header">
+        <text class="section-title">热门标签</text>
+        <text class="section-desc">您的梦境主题标签</text>
+      </view>
+      <view class="tags-cloud" wx:if="{{tagStats.length > 0}}">
+        <view class="tag-item" wx:for="{{tagStats}}" wx:key="name"
+              style="{{item.style}}">
+          <text class="tag-name">#{{item.name}}</text>
+          <text class="tag-count">{{item.count}}</text>
+        </view>
+      </view>
+      <view class="empty-chart" wx:else>
+        <text class="empty-icon">🏷️</text>
+        <text class="empty-text">暂无标签数据</text>
+      </view>
+    </view>
+
+    <!-- 底部操作 -->
+    <view class="actions-section">
+      <button class="action-btn refresh-btn" bindtap="onRefresh">
+        <text class="btn-icon">🔄</text>
+        <text>刷新数据</text>
+      </button>
+      <button class="action-btn share-btn" bindtap="onShare">
+        <text class="btn-icon">📤</text>
+        <text>分享统计</text>
+      </button>
+    </view>
+  </view>
+</scroll-view>

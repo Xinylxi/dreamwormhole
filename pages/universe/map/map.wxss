@@ -1,0 +1,725 @@
+/**universe.wxss - 二维宇宙地图样式**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 顶部工具栏 */
+.toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 100%);
+  backdrop-filter: blur(20rpx);
+  z-index: 1000;
+  padding: 20rpx 30rpx;
+  padding-top: 120rpx;
+  padding-bottom: 20rpx;
+  pointer-events: auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.5);
+}
+
+/* 搜索容器 */
+.search-container {
+  position: relative;
+  margin-bottom: 20rpx;
+}
+
+.search-input {
+  width: 100%;
+  height: 70rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2rpx solid rgba(102, 126, 234, 0.3);
+  border-radius: 35rpx;
+  padding: 0 80rpx 0 30rpx;
+  font-size: 28rpx;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-close {
+  position: absolute;
+  right: 20rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 32rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 工具栏按钮 */
+.toolbar-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.toolbar-btn {
+  flex: 1;
+  height: 60rpx;
+  background: rgba(102, 126, 234, 0.2);
+  border: 2rpx solid rgba(102, 126, 234, 0.3);
+  border-radius: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #fff;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  z-index: 1001;
+  min-height: 60rpx;
+  line-height: 60rpx;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3);
+}
+
+.toolbar-btn::after {
+  border: none;
+}
+
+.toolbar-btn:active {
+  background: rgba(102, 126, 234, 0.4);
+  transform: scale(0.95);
+}
+
+.toolbar-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.3);
+}
+
+.btn-icon {
+  font-size: 28rpx;
+}
+
+/* 分类滚动 */
+.category-scroll {
+  width: 100%;
+  height: 80rpx;
+  margin-bottom: 20rpx;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1002;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10rpx;
+  padding: 5rpx 0;
+}
+
+.category-list {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 0 20rpx;
+  height: 100%;
+  align-items: center;
+  min-width: max-content;
+}
+
+.category-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14rpx 28rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.4);
+  border-radius: 35rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  min-height: 60rpx;
+  min-width: 80rpx;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: rgba(102, 126, 234, 0.5);
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+}
+
+.category-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: rgba(102, 126, 234, 1);
+  color: #fff;
+  box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.6);
+  font-weight: 700;
+  transform: scale(1.05);
+}
+
+.category-item:active {
+  transform: scale(0.9);
+  opacity: 0.9;
+}
+
+/* 时间筛选 */
+.time-filter {
+  display: flex;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+
+.time-item {
+  padding: 8rpx 20rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.3s ease;
+}
+
+.time-item.active {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #fff;
+}
+
+.time-item:active {
+  transform: scale(0.95);
+}
+
+/* 宇宙容器 */
+.universe-container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 1200rpx;
+  overflow: hidden;
+  padding-top: 300rpx;
+}
+
+/* 宇宙背景 */
+.cosmic-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* 星空背景 */
+.starfield {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.star {
+  position: absolute;
+  width: 2rpx;
+  height: 2rpx;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+/* 星云效果 */
+.nebula {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+  animation: nebulaFloat 20s ease-in-out infinite;
+}
+
+.nebula-1 {
+  width: 400rpx;
+  height: 400rpx;
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.3) 0%, transparent 70%);
+  top: 10%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.nebula-2 {
+  width: 300rpx;
+  height: 300rpx;
+  background: radial-gradient(circle, rgba(0, 191, 255, 0.2) 0%, transparent 70%);
+  top: 60%;
+  right: 15%;
+  animation-delay: 7s;
+}
+
+.nebula-3 {
+  width: 500rpx;
+  height: 500rpx;
+  background: radial-gradient(circle, rgba(255, 20, 147, 0.15) 0%, transparent 70%);
+  bottom: 20%;
+  left: 10%;
+  animation-delay: 14s;
+}
+
+@keyframes nebulaFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20rpx, -30rpx) scale(1.1); }
+  66% { transform: translate(-15rpx, 20rpx) scale(0.9); }
+}
+
+/* 星球网格布局 */
+.planets-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.planet-item {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.planet-item:active {
+  transform: scale(1.1);
+}
+
+.planet-item.selected .planet-body {
+  box-shadow: 0 0 40rpx rgba(102, 126, 234, 0.8);
+  animation: planetSelected 2s ease-in-out infinite;
+}
+
+@keyframes planetSelected {
+  0%, 100% { 
+    box-shadow: 0 0 30rpx rgba(102, 126, 234, 0.6);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 50rpx rgba(102, 126, 234, 1);
+    transform: scale(1.1);
+  }
+}
+
+/* 星球主体 */
+.planet-body {
+  position: relative;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  margin-bottom: 10rpx;
+  box-shadow: 0 0 20rpx rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.planet-item:hover .planet-body {
+  transform: scale(1.2);
+  box-shadow: 0 0 30rpx rgba(255, 255, 255, 0.5);
+}
+
+.planet-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+}
+
+.planet-atmosphere {
+  position: absolute;
+  top: -10rpx;
+  left: -10rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: atmospherePulse 4s ease-in-out infinite;
+}
+
+@keyframes atmospherePulse {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.2); opacity: 0.6; }
+}
+
+.planet-glow {
+  position: absolute;
+  top: -20rpx;
+  left: -20rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  animation: planetGlow 6s ease-in-out infinite;
+}
+
+@keyframes planetGlow {
+  0%, 100% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.3); opacity: 0.4; }
+}
+
+/* 星球名称 */
+.planet-name {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8rpx;
+  text-shadow: 0 0 10rpx rgba(255, 255, 255, 0.5);
+}
+
+/* 星球信息 */
+.planet-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.planet-dreams {
+  font-size: 20rpx;
+  color: #a0aec0;
+}
+
+.planet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4rpx;
+  justify-content: center;
+}
+
+.planet-tag {
+  font-size: 18rpx;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.2);
+  padding: 2rpx 8rpx;
+  border-radius: 10rpx;
+  border: 1rpx solid rgba(102, 126, 234, 0.3);
+}
+
+/* 点击提示 */
+.planet-hint {
+  font-size: 18rpx;
+  color: #a0aec0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  margin-top: 8rpx;
+}
+
+.planet-item:hover .planet-hint {
+  opacity: 1;
+}
+
+/* 连接线 */
+.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.connection-line {
+  position: absolute;
+  height: 2rpx;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(102, 126, 234, 0.4) 20%, 
+    rgba(255, 255, 255, 0.5) 50%, 
+    rgba(102, 126, 234, 0.4) 80%, 
+    transparent 100%);
+  transform-origin: left center;
+  animation: connectionPulse 8s ease-in-out infinite;
+  box-shadow: 0 0 10rpx rgba(102, 126, 234, 0.3);
+}
+
+@keyframes connectionPulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.6; }
+}
+
+/* 中心焦点 */
+.center-focus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.focus-ring {
+  width: 200rpx;
+  height: 200rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: focusPulse 3s ease-in-out infinite;
+}
+
+.focus-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300rpx;
+  height: 300rpx;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: focusGlow 4s ease-in-out infinite;
+}
+
+@keyframes focusPulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+}
+
+@keyframes focusGlow {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+
+/* 底部信息面板 */
+.info-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 20%, rgba(0, 0, 0, 0.95) 100%);
+  backdrop-filter: blur(20rpx);
+  z-index: 10;
+  padding: 30rpx;
+  max-height: 50vh;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.panel-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.panel-stats {
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+.panel-content {
+  max-height: 300rpx;
+  overflow-y: auto;
+}
+
+/* 选中星球信息 */
+.selected-planet {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50rpx); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.planet-preview {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.preview-icon {
+  font-size: 60rpx;
+  margin-right: 20rpx;
+}
+
+.preview-info {
+  flex: 1;
+}
+
+.preview-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.preview-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+  line-height: 1.4;
+}
+
+.planet-details {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.detail-label {
+  font-size: 20rpx;
+  color: #a0aec0;
+  margin-bottom: 4rpx;
+}
+
+.detail-value {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+.explore-btn {
+  width: 100%;
+  height: 80rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 40rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8rpx 30rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.explore-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.4);
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+/* 空选择状态 */
+.empty-selection {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  display: block;
+  font-size: 28rpx;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.empty-hint {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+/* 空宇宙状态 */
+.empty-universe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+}
+
+.empty-content {
+  max-width: 600rpx;
+}
+
+.empty-content .empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 30rpx;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20rpx); }
+}
+
+.empty-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 20rpx;
+  text-shadow: 0 0 20rpx rgba(255, 255, 255, 0.3);
+}
+
+.empty-description {
+  display: block;
+  font-size: 28rpx;
+  color: #a0aec0;
+  margin-bottom: 40rpx;
+  line-height: 1.5;
+}
+
+.create-dream-btn {
+  width: 200rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 40rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8rpx 30rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+  margin: 0 auto;
+}
+
+.create-dream-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.4);
+}

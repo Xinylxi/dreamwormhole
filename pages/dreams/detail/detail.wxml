@@ -1,0 +1,328 @@
+<!--dream-detail.wxml - 梦境详情-->
+<navigation-bar title="梦境详情" back="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list">
+  <!-- 梦境标题 -->
+  <view class="dream-header">
+    <view class="dream-date">{{dreamDetail.date}}</view>
+    <view class="dream-time">{{dreamDetail.time}}</view>
+  </view>
+
+  <!-- 梦境内容 -->
+  <view class="dream-content-card">
+    <view class="card-title">
+      <text class="title-icon">🌌</text>
+      <text class="title-text">梦境内容</text>
+      <!-- 语音播放按钮 -->
+      <view class="audio-controls" wx:if="{{hasAudio}}">
+        <button class="audio-play-btn {{isPlaying ? 'playing' : ''}}" bindtap="{{isPlaying ? 'stopPlayback' : 'playDreamAudio'}}">
+          <text class="audio-icon">{{isPlaying ? '⏸️' : '🎵'}}</text>
+          <text class="audio-text">{{isPlaying ? '暂停' : '播放语音'}}</text>
+        </button>
+        <text class="play-duration" wx:if="{{isPlaying}}">{{playDuration}}s</text>
+      </view>
+    </view>
+    <view class="dream-text">{{dreamDetail.content}}</view>
+  </view>
+
+  <!-- 情绪分析 -->
+  <view class="emotion-card">
+    <view class="card-title">
+      <text class="title-icon">📊</text>
+      <text class="title-text">情绪分析</text>
+    </view>
+    <view class="emotion-list">
+      <view class="emotion-item" wx:for="{{dreamDetail.emotions}}" wx:key="name">
+        <view class="emotion-header">
+          <text class="emotion-name">{{item.name}}</text>
+          <text class="emotion-value">{{item.value}}%</text>
+        </view>
+        <view class="emotion-bar">
+          <view class="emotion-bar-fill" style="width: {{item.value}}%"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 梦境标签 -->
+  <view class="tags-card">
+    <view class="card-title">
+      <text class="title-icon">🏷️</text>
+      <text class="title-text">梦境标签</text>
+    </view>
+    <view class="tags-container">
+      <text class="tag" wx:for="{{dreamDetail.tags}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <!-- AI解梦 -->
+  <view class="interpretation-card" wx:if="{{dreamDetail.interpretation}}">
+    <view class="card-title">
+      <text class="title-icon">🔮</text>
+      <text class="title-text">AI解梦</text>
+    </view>
+    <view class="interpretation-text">{{dreamDetail.interpretation}}</view>
+  </view>
+
+  <!-- 操作按钮 - 统一底部样式 -->
+  <view class="bottom-actions">
+    <view class="action-button favorite-btn {{dreamDetail.isFavorite ? 'favorited' : ''}}" bindtap="toggleFavorite">
+      <text class="btn-icon">{{dreamDetail.isFavorite ? '❤️' : '🤍'}}</text>
+      <text class="btn-text">{{dreamDetail.isFavorite ? '已收藏' : '收藏'}}</text>
+    </view>
+    <view class="action-button share-btn" bindtap="shareDream">
+      <text class="btn-icon">📤</text>
+      <text class="btn-text">分享</text>
+    </view>
+    <view class="action-button delete-btn" bindtap="deleteDream">
+      <text class="btn-icon">🗑️</text>
+      <text class="btn-text">删除</text>
+    </view>
+  </view>
+
+  <!-- 相似梦境 -->
+  <view class="similar-section" wx:if="{{similarDreams.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">相似梦境</text>
+    </view>
+    <view class="similar-list">
+      <view class="similar-item" wx:for="{{similarDreams}}" wx:key="id" bindtap="viewSimilarDream" data-id="{{item.id}}">
+        <view class="similar-date">{{item.date}}</view>
+        <view class="similar-preview">{{item.preview}}</view>
+      </view>
+    </view>
+  </view>
+</scroll-view>
+/* 操作按钮区域样式 */
+.bottom-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 40rpx;
+  gap: 20rpx;
+  margin: 40rpx 0;
+  background: white;
+  border-top: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.action-button {
+  flex: 1;
+  height: 100rpx;
+  border-radius: 24rpx; /* 更圆的圆角，和 index 顶部按钮一致 */
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 26rpx;
+  font-weight: 500;
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.25);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10rpx 0;
+}
+
+/* 按钮点击效果 */
+.action-button:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.3);
+}
+
+/* 特殊按钮样式 */
+.favorite-btn.favorited {
+  background: linear-gradient(135deg, #FF6B6B 0%, #EE5A24 100%);
+  box-shadow: 0 4rpx 15rpx rgba(255, 107, 107, 0.25);
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #FF4757 0%, #FF3742 100%);
+  box-shadow: 0 4rpx 15rpx rgba(255, 71, 87, 0.25);
+}
+
+/* 按钮内部图标和文字 */
+.btn-icon {
+  font-size: 32rpx;
+  margin-bottom: 8rpx;
+}
+
+.btn-text {
+  font-size: 24rpx;
+  line-height: 1.2;
+}
+
+/* 其他原有样式保持不变 */
+.scrollarea {
+  height: 100vh;
+}
+
+.dream-header {
+  padding: 40rpx;
+  text-align: center;
+}
+
+.dream-date {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.dream-time {
+  font-size: 28rpx;
+  color: #666;
+  margin-top: 10rpx;
+}
+
+.dream-content-card,
+.emotion-card,
+.tags-card,
+.interpretation-card {
+  margin: 20rpx 40rpx;
+  padding: 30rpx;
+  background: white;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.title-icon {
+  font-size: 32rpx;
+  margin-right: 15rpx;
+}
+
+.title-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.dream-text {
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #444;
+}
+
+.emotion-item {
+  margin-bottom: 20rpx;
+}
+
+.emotion-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+
+.emotion-name {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.emotion-value {
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.emotion-bar {
+  height: 8rpx;
+  background: #f0f0f0;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.emotion-bar-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4rpx;
+  transition: width 0.5s ease;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+}
+
+.tag {
+  padding: 12rpx 24rpx;
+  background: #f8f9fa;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #667eea;
+  border: 1rpx solid #e9ecef;
+}
+
+.interpretation-text {
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #444;
+  background: #f8f9fa;
+  padding: 25rpx;
+  border-radius: 12rpx;
+  border-left: 6rpx solid #667eea;
+}
+
+.similar-section {
+  margin: 40rpx;
+}
+
+.section-header {
+  margin-bottom: 25rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.similar-item {
+  padding: 25rpx;
+  background: white;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.similar-date {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.similar-preview {
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.4;
+}
+
+/* 音频控制按钮样式 */
+.audio-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+}
+
+.audio-play-btn {
+  padding: 12rpx 24rpx;
+  background: #667eea;
+  color: white;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
+
+.audio-play-btn.playing {
+  background: #ff6b6b;
+}
+
+.play-duration {
+  font-size: 22rpx;
+  color: #666;
+}

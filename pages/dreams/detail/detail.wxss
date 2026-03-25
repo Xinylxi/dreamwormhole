@@ -1,0 +1,283 @@
+/**dream-detail.wxss - 梦境详情页面样式**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: hidden;
+}
+
+/* 梦境标题 */
+.dream-header {
+  padding: 40rpx 30rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.dream-date {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.dream-time {
+  font-size: 28rpx;
+  opacity: 0.9;
+}
+
+/* 卡片通用样式 */
+.dream-content-card,
+.emotion-card,
+.tags-card,
+.interpretation-card {
+  margin: 30rpx;
+  padding: 30rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(102, 126, 234, 0.1);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+.card-title-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.title-icon {
+  font-size: 32rpx;
+}
+
+.title-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* 语音控制 */
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.audio-play-btn {
+  height: 60rpx;
+  padding: 0 20rpx;
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  border-radius: 30rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.audio-play-btn.playing {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+}
+
+.audio-play-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-icon {
+  font-size: 28rpx;
+}
+
+.audio-text {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.play-duration {
+  font-size: 22rpx;
+  color: #667eea;
+  font-weight: 500;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* 梦境内容 */
+.dream-text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #4a5568;
+  text-align: justify;
+}
+
+/* 情绪分析 */
+.emotion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.emotion-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.emotion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.emotion-name {
+  font-size: 28rpx;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.emotion-value {
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.emotion-bar {
+  height: 16rpx;
+  background: #e2e8f0;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.emotion-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8rpx;
+  transition: width 0.5s ease;
+}
+
+/* 标签 */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.tag {
+  padding: 12rpx 24rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+}
+
+/* AI解梦 */
+.interpretation-text {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #4a5568;
+  background: #f7fafc;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  border-left: 4rpx solid #667eea;
+}
+
+/* 操作按钮 */
+.action-section {
+  display: flex;
+  gap: 20rpx;
+  padding: 0 30rpx 30rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+}
+
+.favorite-btn {
+  background: #f0f0f0;
+  color: #666;
+  border: 2rpx solid #ddd;
+}
+
+.favorite-btn.favorited {
+  background: #ff6b6b;
+  color: #fff;
+  border-color: #ff6b6b;
+}
+
+.share-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.delete-btn {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+/* 相似梦境 */
+.similar-section {
+  padding: 0 30rpx 40rpx;
+}
+
+.section-header {
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.similar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.similar-item {
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(102, 126, 234, 0.08);
+}
+
+.similar-date {
+  font-size: 24rpx;
+  color: #a0aec0;
+  margin-bottom: 12rpx;
+}
+
+.similar-preview {
+  font-size: 26rpx;
+  color: #4a5568;
+  line-height: 1.6;
+}

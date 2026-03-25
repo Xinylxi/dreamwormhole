@@ -1,0 +1,560 @@
+/**analytics.wxss - 梦境统计分析页面样式**/
+page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+.scrollarea {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 加载状态 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  padding: 40rpx;
+}
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 6rpx solid rgba(102, 126, 234, 0.2);
+  border-top: 6rpx solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 30rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #a0aec0;
+}
+
+/* 内容区域 */
+.content {
+  padding: 0 30rpx 40rpx;
+}
+
+/* 概览区域 */
+.overview-section {
+  margin: 40rpx 0;
+}
+
+.overview-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.overview-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
+}
+
+.card-icon {
+  font-size: 48rpx;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-value {
+  display: block;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.card-label {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+  margin-top: 8rpx;
+}
+
+/* 筛选区域 */
+.filter-section {
+  margin: 40rpx 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-title {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+  text-align: center;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.filter-btn {
+  flex: 1;
+  height: 60rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2rpx solid rgba(255, 255, 255, 0.2);
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.3);
+}
+
+.filter-btn:active {
+  transform: scale(0.95);
+}
+
+/* 图表区域 */
+.chart-section {
+  margin: 40rpx 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.section-header {
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.section-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+/* 情绪图表 */
+.emotion-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.chart-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.chart-label {
+  min-width: 120rpx;
+  flex-shrink: 0;
+}
+
+.emotion-name {
+  display: block;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.emotion-count {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+  margin-top: 4rpx;
+}
+
+.chart-bar {
+  flex: 1;
+  height: 12rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 6rpx;
+  transition: width 0.8s ease;
+}
+
+.percentage {
+  min-width: 80rpx;
+  text-align: right;
+  font-size: 26rpx;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* 星球图表 */
+.planet-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.planet-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.planet-info {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  min-width: 200rpx;
+  flex-shrink: 0;
+}
+
+.planet-emoji {
+  font-size: 36rpx;
+}
+
+.planet-details {
+  flex: 1;
+}
+
+.planet-name {
+  display: block;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+}
+
+.planet-count {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+  margin-top: 4rpx;
+}
+
+.planet-bar {
+  flex: 1;
+  height: 12rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+/* 时间图表 */
+.time-chart {
+  margin-top: 30rpx;
+}
+
+.time-bars {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  height: 200rpx;
+  margin-bottom: 20rpx;
+  padding: 0 10rpx;
+}
+
+.time-bar {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4rpx 4rpx 0 0;
+  margin: 0 2rpx;
+  position: relative;
+  min-height: 4rpx;
+  transition: height 0.5s ease;
+}
+
+.time-bar:hover {
+  opacity: 0.8;
+}
+
+.bar-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8rpx 12rpx;
+  border-radius: 6rpx;
+  font-size: 20rpx;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.time-bar:hover .bar-tooltip {
+  opacity: 1;
+}
+
+.time-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10rpx;
+}
+
+.time-label {
+  font-size: 20rpx;
+  color: #a0aec0;
+  text-align: center;
+  flex: 1;
+}
+
+/* 趋势图表 */
+.trend-section {
+  margin: 40rpx 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.trend-chart {
+  position: relative;
+  height: 300rpx;
+  margin-top: 30rpx;
+}
+
+.trend-line {
+  position: relative;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 8rpx;
+}
+
+.trend-point {
+  position: absolute;
+  width: 16rpx;
+  height: 16rpx;
+  margin: -8rpx 0 0 -8rpx;
+}
+
+.point-dot {
+  width: 100%;
+  height: 100%;
+  background: #667eea;
+  border: 3rpx solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10rpx rgba(102, 126, 234, 0.5);
+  transition: all 0.3s ease;
+}
+
+.trend-point:hover .point-dot {
+  transform: scale(1.5);
+  box-shadow: 0 0 20rpx rgba(102, 126, 234, 0.8);
+}
+
+.point-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8rpx 12rpx;
+  border-radius: 6rpx;
+  font-size: 20rpx;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  margin-bottom: 8rpx;
+}
+
+.trend-point:hover .point-tooltip {
+  opacity: 1;
+}
+
+.trend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding: 0 20rpx;
+}
+
+.trend-label {
+  font-size: 20rpx;
+  color: #a0aec0;
+  text-align: center;
+}
+
+.trend-label.center {
+  flex: 1;
+}
+
+.trend-label.right {
+  text-align: right;
+}
+
+/* 标签云 */
+.tags-section {
+  margin: 40rpx 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16rpx;
+  padding: 30rpx;
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.tags-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 30rpx;
+  justify-content: center;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1rpx solid rgba(102, 126, 234, 0.3);
+  border-radius: 20rpx;
+  padding: 12rpx 20rpx;
+  color: #667eea;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tag-item:hover {
+  transform: scale(1.05);
+  background: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.2);
+}
+
+.tag-name {
+  color: #fff;
+}
+
+.tag-count {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 10rpx;
+  padding: 2rpx 8rpx;
+  font-size: 20rpx;
+  color: #fff;
+}
+
+/* 空状态 */
+.empty-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 40rpx;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #a0aec0;
+}
+
+/* 底部操作 */
+.actions-section {
+  margin: 60rpx 0 40rpx;
+  display: flex;
+  gap: 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 40rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.3);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.refresh-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.share-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: #fff;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+/* 响应式设计 */
+@media (max-width: 750rpx) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-buttons {
+    flex-direction: column;
+  }
+
+  .filter-btn {
+    margin-bottom: 12rpx;
+  }
+
+  .actions-section {
+    flex-direction: column;
+  }
+}

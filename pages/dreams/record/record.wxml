@@ -1,0 +1,193 @@
+<!--index.wxml - 梦境虫洞：梦境记录-->
+<navigation-bar title="梦境虫洞" back="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack"></navigation-bar>
+
+<scroll-view class="scrollarea" scroll-y type="list">
+  <!-- 欢迎区域 -->
+  <view class="hero-section">
+    <view class="hero-title">记录你的梦境</view>
+    <view class="hero-subtitle">探索平行时空的扭曲</view>
+  </view>
+
+  <!-- 快速记录卡片 -->
+  <view class="record-card">
+    <view class="record-header">
+      <view class="record-icon">🌌</view>
+      <view class="record-title">记录你的梦境...</view>
+    </view>
+    <!-- 输入区域 -->
+    <view class="input-area">
+      <textarea 
+        class="dream-textarea" 
+        placeholder="请输入梦境内容（至少3个字符）..."
+        value="{{dreamText}}"
+        bindinput="onDreamInput"
+        maxlength="500"
+        auto-height
+      ></textarea>
+      <view class="char-count">{{dreamText.length}}/500</view>
+    </view>
+
+    <!-- 核心操作：语音输入按钮（移动到文本框下方） -->
+    <view class="primary-action">
+      <!-- 录音状态显示 -->
+      <view class="recording-status" wx:if="{{isRecording}}">
+        <view class="recording-indicator">
+          <view class="recording-dot"></view>
+          <text class="recording-text">录音中... {{recordingDuration}}s</text>
+        </view>
+        <button class="stop-recording-btn" bindtap="stopRecording">
+          <text class="btn-icon">⏹️</text>
+          <text>停止录音</text>
+        </button>
+      </view>
+      
+      <!-- 录音完成状态 -->
+      <view class="recording-complete" wx:elif="{{audioPath}}">
+        <view class="recording-info">
+          <text class="recording-duration">录音时长: {{recordingDuration}}s</text>
+        </view>
+        <view class="recording-controls">
+          <button class="play-btn {{isPlaying ? 'playing' : ''}}" bindtap="{{isPlaying ? 'stopPlayback' : 'playRecording'}}">
+            <text class="btn-icon">{{isPlaying ? '⏸️' : '▶️'}}</text>
+            <text>{{isPlaying ? '暂停' : '播放'}}</text>
+          </button>
+          <button class="delete-recording-btn" bindtap="deleteRecording">
+            <text class="btn-icon">🗑️</text>
+            <text>删除</text>
+          </button>
+        </view>
+      </view>
+      
+      <!-- 开始录音按钮（按住讲话，松开发送） -->
+      <button 
+        class="voice-btn-primary" 
+        wx:else 
+        hover-class="pressed"
+        bindtouchstart="startRecordingPress"
+        bindtouchmove="onRecordingTouchMove"
+        bindtouchend="stopRecordingPress"
+        bindtouchcancel="cancelRecordingPress"
+      >
+        <view class="voice-icon-large">🎤</view>
+        <view class="voice-labels">
+          <text class="voice-text">按住说话</text>
+          <text class="voice-hint">松开完成录音</text>
+        </view>
+      </button>
+
+      <!-- 录音浮层提示 -->
+      <view class="record-overlay {{cancelSlide ? 'danger' : ''}}" wx:if="{{showRecordOverlay}}">
+        <text class="overlay-icon">{{cancelSlide ? '⬆️' : '🎙️'}}</text>
+        <text class="overlay-text">{{cancelSlide ? '上滑取消' : '松开完成'}}</text>
+      </view>
+    </view>
+
+    <!-- 顶部工具栏：编辑操作 -->
+    <view class="toolbar-top">
+      <view class="toolbar-btn template-btn" bindtap="addTextTemplate" hover-class="toolbar-btn-hover">
+        <text class="btn-icon">📋</text>
+        <text class="btn-text">添加模板</text>
+      </view>
+      <view class="toolbar-btn analyze-btn {{!dreamText || isAnalyzing ? 'disabled' : ''}}" bindtap="analyzeDream" hover-class="toolbar-btn-hover">
+        <text class="btn-icon">🔮</text>
+        <text class="btn-text">{{isAnalyzing ? '分析中...' : 'AI分析'}}</text>
+      </view>
+      <view class="toolbar-btn save-btn {{!dreamText || !isAnalyzed ? 'disabled' : ''}}" bindtap="saveDream" hover-class="toolbar-btn-hover">
+        <text class="btn-icon">💾</text>
+        <text class="btn-text">保存</text>
+      </view>
+    </view>
+
+    <!-- 情绪标签预览 -->
+    <view class="tags-preview" wx:if="{{emotionTags.length > 0}}">
+      <view class="tags-title">情绪分析</view>
+      <view class="tags-container">
+        <view class="tag-item" wx:for="{{emotionTags}}" wx:key="index">
+          <text class="tag-name">{{item.name}}</text>
+          <view class="tag-bar">
+            <view class="tag-bar-fill" style="width: {{item.value}}%"></view>
+          </view>
+          <text class="tag-value">{{item.value}}%</text>
+        </view>
+      </view>
+      <view class="analysis-result" wx:if="{{analysisResult}}">
+        <view class="result-planet">
+          <text class="planet-emoji">{{analysisResult.planetEmoji}}</text>
+          <text class="planet-name">{{analysisResult.planetName}}</text>
+        </view>
+        <view class="result-tags">
+          <text class="result-tag" wx:for="{{analysisResult.tags}}" wx:key="*this">{{item}}</text>
+        </view>
+        <view class="result-interpretation">{{analysisResult.interpretation}}</view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- 最近梦境 -->
+  <view class="recent-section">
+    <view class="section-header">
+      <text class="section-title">最近梦境</text>
+      <button class="section-link-btn" bindtap="goToUniverse" hover-class="section-link-btn-hover" type="default" plain="true">
+        <text>查看宇宙地图 →</text>
+      </button>
+    </view>
+    
+    <view class="dream-list" wx:if="{{recentDreams.length > 0}}">
+      <view class="dream-item" 
+            wx:for="{{recentDreams}}" 
+            wx:key="id" 
+            bindtap="viewDreamDetail" 
+            data-id="{{item.id}}"
+            data-index="{{index}}">
+        
+        <!-- 梦境头部信息 -->
+        <view class="dream-header">
+          <view class="dream-date">{{item.date}}</view>
+          <view class="dream-time">{{item.time}}</view>
+          <view class="dream-emotion" wx:if="{{item.emotion}}">
+            <text class="emotion-icon">{{item.emotion}}</text>
+          </view>
+        </view>
+        
+        <!-- 梦境预览摘要 -->
+        <view class="dream-preview">
+          <text class="preview-text">{{item.preview}}</text>
+          <text class="preview-more" wx:if="{{item.hasMore}}">...</text>
+        </view>
+        
+        <!-- 梦境标签 -->
+        <view class="dream-tags" wx:if="{{item.tags && item.tags.length > 0}}">
+          <text class="dream-tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="empty-state" wx:else>
+      <text class="empty-icon">🌙</text>
+      <text class="empty-text">还没有梦境记录</text>
+      <text class="empty-hint">开始记录你的第一个梦境吧</text>
+    </view>
+  </view>
+
+  <!-- 互动功能 -->
+  <view class="interaction-section">
+    <view class="section-header">
+      <text class="section-title">时空穿梭</text>
+    </view>    <view class="interaction-card" bindtap="goToAnalytics">
+      <view class="interaction-icon">📊</view>
+      <view class="interaction-content">
+        <view class="interaction-title">梦境统计</view>
+        <view class="interaction-desc">查看梦境数据分析和趋势图表</view>
+      </view>
+      <view class="interaction-arrow">→</view>
+    </view>    <view class="interaction-card" bindtap="startDreamGuidance">
+      <view class="inteiiiiraction-icon">🚀</view>
+      <view class="interaction-content">
+        <view class="interaction-title">AI梦境引导</view>
+        <view class="interaction-desc">告诉AI你想做什么梦，睡前获得语音引导</view>
+      </view>
+      <view class="interaction-arrow">→</view>
+    </view>
+  </view>
+</scroll-view>
