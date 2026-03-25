@@ -1,0 +1,32 @@
+{
+  "pages": [
+    "pages/dreams/record/record",
+    "pages/universe/map/map",
+    "pages/dreams/detail/detail",
+    "pages/planets/detail/detail",
+    "pages/universe/map/explore/planet-explore",
+    "pages/testing/test/test",
+    "pages/testing/api-test/api-test",
+    "pages/analytics/analytics"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom",
+    "backgroundColor": "#f5f7fa"
+  },
+  "cloud": true,
+  "style": "v2",
+  "renderer": "skyline",
+  "rendererOptions": {
+    "skyline": {
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "disableABTest": true,
+      "sdkVersionBegin": "3.0.0",
+      "sdkVersionEnd": "15.255.255"
+    }
+  },
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
