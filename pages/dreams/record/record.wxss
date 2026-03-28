@@ -1,4 +1,9 @@
-/**index.wxss - 梦境记录页面样式**/
+/**
+ * 梦境记录页面 - 修复版样式
+ * 适配微信小程序 WXSS 规范，无语法错误，兼容真机
+ */
+
+/* 全局页面 */
 page {
   height: 100vh;
   display: flex;
@@ -59,7 +64,7 @@ page {
   color: #fff;
 }
 
-/* 核心操作：语音输入按钮 */
+/* 语音按钮 */
 .primary-action {
   margin: 30rpx 0;
   text-align: center;
@@ -110,34 +115,6 @@ page {
   filter: brightness(1.05);
 }
 
-/* 录音浮层提示 */
-.record-overlay {
-  position: fixed;
-  left: 50%;
-  bottom: 22%;
-  transform: translateX(-50%);
-  padding: 20rpx 28rpx;
-  background: rgba(0,0,0,0.75);
-  color: #fff;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.25);
-}
-
-.record-overlay .overlay-icon {
-  font-size: 32rpx;
-}
-
-.record-overlay .overlay-text {
-  font-size: 28rpx;
-}
-
-.record-overlay.danger {
-  background: rgba(220, 38, 38, 0.9);
-}
-
 .voice-icon-large {
   font-size: 40rpx;
   animation: voicePulse 2s ease-in-out infinite;
@@ -166,12 +143,35 @@ page {
   letter-spacing: 1rpx;
 }
 
-@keyframes voicePulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+/* 录音浮层 */
+.record-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  padding: 20rpx 28rpx;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.25);
 }
 
-/* 录音状态样式 */
+.record-overlay .overlay-icon {
+  font-size: 32rpx;
+}
+
+.record-overlay .overlay-text {
+  font-size: 28rpx;
+}
+
+.record-overlay.danger {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+/* 录音中状态 */
 .recording-status {
   display: flex;
   flex-direction: column;
@@ -195,11 +195,6 @@ page {
   background: #fff;
   border-radius: 50%;
   animation: recordingBlink 1s ease-in-out infinite;
-}
-
-@keyframes recordingBlink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0.3; }
 }
 
 .recording-text {
@@ -228,7 +223,7 @@ page {
   transform: scale(0.95);
 }
 
-/* 录音完成状态样式 */
+/* 录音完成 */
 .recording-complete {
   display: flex;
   flex-direction: column;
@@ -287,7 +282,7 @@ page {
   transform: scale(0.95);
 }
 
-/* 顶部工具栏 - 修复后的样式 */
+/* 顶部工具栏 */
 .toolbar-top {
   display: flex;
   gap: 15rpx;
@@ -303,11 +298,10 @@ page {
   height: 70rpx;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: 2rpx solid rgba(255, 255, 255, 0.3);
-  border-radius: 6rpx; /* 矩形：小圆角 */
+  border-radius: 6rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
   font-size: 22rpx;
   font-weight: 600;
   color: #fff;
@@ -324,16 +318,11 @@ page {
   box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.4);
 }
 
-.toolbar-btn-hover {
-  opacity: 0.8;
-}
-
 .toolbar-btn.disabled {
   opacity: 0.5;
   pointer-events: none;
 }
 
-/* 修复按钮内部布局 */
 .toolbar-btn .btn-icon {
   font-size: 24rpx;
   position: absolute;
@@ -346,13 +335,12 @@ page {
 .toolbar-btn .btn-text {
   font-size: 20rpx;
   font-weight: 600;
-  white-space: nowrap; /* 保持单行水平 */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
-  text-align: center; /* 文本水平居中 */
+  text-align: center;
   line-height: normal;
-  padding-left: 0; /* 图标已绝对定位，文本不需左侧内边距 */
 }
 
 /* 输入区域 */
@@ -519,29 +507,11 @@ page {
   border-radius: 8rpx;
   background: transparent;
   border: none;
-  line-height: 1.5;
-  position: relative;
-  z-index: 100;
-  margin: 0;
-  min-height: auto;
-  height: auto;
 }
 
-.section-link-btn::after {
-  border: none;
-}
-
-.section-link-btn text {
-  color: #667eea;
-  font-weight: 500;
-}
-
-.section-link-btn-hover {
+.section-link-btn:active {
   background: rgba(102, 126, 234, 0.1);
   transform: scale(0.95);
-}
-
-.section-link-btn-hover text {
   color: #5568d3;
 }
 
@@ -569,7 +539,6 @@ page {
   transform: scale(0.98);
 }
 
-/* 梦境头部信息 */
 .dream-header {
   display: flex;
   align-items: center;
@@ -577,15 +546,10 @@ page {
   margin-bottom: 12rpx;
 }
 
-.dream-date {
+.dream-date, .dream-time {
   font-size: 24rpx;
   color: #a0aec0;
   font-weight: 500;
-}
-
-.dream-time {
-  font-size: 22rpx;
-  color: #a0aec0;
 }
 
 .dream-emotion {
@@ -710,4 +674,173 @@ page {
 .preview-more {
   color: #667eea;
   font-weight: 500;
+}
+
+/* Coze故事区域 */
+.coze-story-section {
+  margin: 40rpx 30rpx;
+  padding: 32rpx;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(102, 126, 234, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.coze-story-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.coze-story-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.coze-story-icon {
+  font-size: 40rpx;
+}
+
+.coze-story-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.coze-story-close {
+  padding: 8rpx 16rpx;
+  border-radius: 40rpx;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.close-icon {
+  font-size: 36rpx;
+  color: #999;
+  font-weight: bold;
+}
+
+.coze-story-content {
+  padding: 30rpx;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12rpx;
+  margin-bottom: 24rpx;
+  max-height: 1000rpx;
+  overflow-y: auto;
+}
+
+.story-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.coze-story-footer {
+  text-align: center;
+  padding: 16rpx;
+  font-style: italic;
+}
+
+.footer-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 分支选项 */
+.coze-options-container {
+  margin-top: 30rpx;
+  padding: 30rpx;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20rpx;
+}
+
+.options-title {
+  font-size: 28rpx;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 30rpx;
+  opacity: 0.9;
+}
+
+.branch-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.branch-option-item {
+  padding: 25rpx;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.3));
+  border-radius: 15rpx;
+  border: 2rpx solid rgba(138, 43, 226, 0.4);
+  transition: all 0.3s ease;
+}
+
+.branch-option-item:active {
+  transform: scale(0.98);
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.4), rgba(75, 0, 130, 0.5));
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  margin-bottom: 10rpx;
+}
+
+.option-letter {
+  width: 50rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-radius: 50%;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #fff;
+  box-shadow: 0 4rpx 15rpx rgba(139, 92, 246, 0.4);
+}
+
+.option-icon {
+  font-size: 36rpx;
+}
+
+.option-text {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  padding-left: 65rpx;
+}
+
+.round-info {
+  margin-top: 30rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+/* 动画 */
+@keyframes voicePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes recordingBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

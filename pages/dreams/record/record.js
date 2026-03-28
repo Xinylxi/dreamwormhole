@@ -1,7 +1,8 @@
-// index.js - 梦境记录页面
+// record-interactive.js - 梦境记录页面（带完整交互功能）
 const { getPlanetConfig } = require('../../../utils/ui/planet-config');
 const { saveDream, getUserDreams } = require('../../../utils/data/cloud');
 const { analyzeDream } = require('../../../utils/ai/coze');
+const { parseCozeResponse } = require('../../../utils/ai/coze-parser');
 
 Page({
   data: {
@@ -11,6 +12,21 @@ Page({
     emotionTags: [],
     analysisResult: null,
     recentDreams: [],
+    
+    // Coze 平行宇宙故事相关
+    showCozeStory: false,
+    optionInput: "",
+    cozeStoryContent: '',
+    storyData: null,          // 存储解析后的故事数据
+    currentRound: 0,          // 当前轮数
+    totalRounds: 10,          // 总轮数
+    branchOptions: [],        // 分支选项列表
+    isStoryCompleted: false,  // 故事是否完成
+    selectedOption: null,     // 用户选择的选项
+    
+    // 会话ID（用于保持Coze对话上下文）
+    conversationId: null,
+    
     // 语音录制相关
     isRecording: false,
     recordingDuration: 0,
@@ -19,71 +35,15 @@ Page({
     isPlaying: false,
     playTimer: null,
     playDuration: 0,
+    
     // 语音长按手势增强
     isLongPressRecording: false,
     canceledByGesture: false,
+    
     // 滑动取消逻辑
     touchStartY: 0,
     cancelSlide: false,
     showRecordOverlay: false
-  },
-  // 长按开始录音（按下）
-  startRecordingPress(e) {
-    // 若已在录音，忽略
-    if (this.data.isRecording) return;
-    // 先检查权限后开始
-    wx.getSetting({
-      success: (res) => {
-        if (res.authSetting['scope.record'] === false) {
-          wx.showModal({
-            title: '需要录音权限',
-            content: '请在设置中允许使用麦克风以进行语音记录',
-            success: (modalRes) => {
-              if (modalRes.confirm) wx.openSetting();
-            }
-          });
-          return;
-        }
-        // 轻微震动作为反馈
-        if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
-        const startY = (e && e.touches && e.touches[0]?.clientY) || 0;
-        this.setData({ 
-          isLongPressRecording: true, 
-          canceledByGesture: false,
-          touchStartY: startY,
-          cancelSlide: false,
-          showRecordOverlay: true
-        });
-        this.startRecording();
-      }
-    });
-  },
-
-  // 松开结束录音
-  stopRecordingPress() {
-    if (!this.data.isRecording) return;
-    this.setData({ isLongPressRecording: false, showRecordOverlay: false });
-    this.stopRecording();
-  },
-
-  // 取消录音（手势被打断/移出）
-  cancelRecordingPress() {
-    if (!this.data.isRecording) return;
-    this.setData({ isLongPressRecording: false, canceledByGesture: true, showRecordOverlay: false });
-    this.stopRecording();
-    wx.showToast({ title: '已取消录音', icon: 'none' });
-  },
-
-  // 按住过程中滑动，用于判定上滑取消
-  onRecordingTouchMove(e) {
-    if (!this.data.isRecording) return;
-    const currentY = e.touches && e.touches[0]?.clientY;
-    if (typeof currentY !== 'number') return;
-    const deltaY = currentY - this.data.touchStartY;
-    const shouldCancel = deltaY < -40; // 上滑超过40px判定为取消
-    if (shouldCancel !== this.data.cancelSlide) {
-      this.setData({ cancelSlide: shouldCancel });
-    }
   },
 
   onLoad() {
@@ -100,24 +60,14 @@ Page({
     });
   },
 
-  // AI分析梦境
+  // AI分析梦境（第一轮）
   async analyzeDream(e) {
-    console.log('点击AI分析按钮', e);
+    console.log('点击AI分析按钮');
+    
     // 检查是否输入了内容
     if (!this.data.dreamText || !this.data.dreamText.trim()) {
       wx.showToast({
         title: '请输入梦境内容',
-        icon: 'none',
-        duration: 2000
-      });
-      return;
-    }
-
-    // 检查文本长度 - 至少需要3个字符
-    const text = this.data.dreamText.trim();
-    if (text.length < 3) {
-      wx.showToast({
-        title: '请输入至少3个字符的梦境内容',
         icon: 'none',
         duration: 2000
       });
@@ -136,22 +86,17 @@ Page({
     try {
       console.log('开始分析梦境，内容:', this.data.dreamText);
       
-      // 调用模拟分析（以后可以替换为真实AI）
-      const result = await analyzeDream(this.data.dreamText);
+      // 调用Coze分析（使用story模式获取完整故事）
+      const result = await analyzeDream(this.data.dreamText, false, 'story');
       
       console.log('分析成功，结果:', result);
       
-      // 验证分析结果
-      if (!result || !result.emotions || !result.tags) {
-        throw new Error('AI返回的分析结果格式不正确');
-      }
-      
       // 获取星球配置
-      const planetConfig = getPlanetConfig(result.planetType);
+      const planetConfig = getPlanetConfig(result.planetType || 'unknown');
       
       // 保存分析结果
       this.setData({
-        emotionTags: result.emotions,
+        emotionTags: result.emotions || [],
         isAnalyzed: true,
         isAnalyzing: false,
         analysisResult: {
@@ -163,11 +108,10 @@ Page({
         }
       });
       
-      wx.hideLoading();
+      // 显示平行宇宙故事（解析Coze响应）
+      this.displayCozeStory(result);
       
-      // 显示分析结果摘要
-      const emotionCount = result.emotions.length;
-      const tagCount = result.tags.length;
+      wx.hideLoading();
       
       wx.showToast({
         title: `分析完成：${planetConfig.name}`,
@@ -190,7 +134,6 @@ Page({
         confirmText: '重试',
         success: (res) => {
           if (res.confirm) {
-            // 用户选择重试
             setTimeout(() => {
               this.analyzeDream();
             }, 500);
@@ -200,31 +143,274 @@ Page({
     }
   },
 
-  // 开始语音录制
-  startVoiceRecord() {
-    // 检查录音权限
+  // 显示Coze平行宇宙故事
+  displayCozeStory(result) {
+    console.log('开始解析Coze响应...');
+    
+    try {
+      // 如果result已经包含解析好的故事数据
+      if (result.storyData) {
+        this.setData({
+          storyData: result.storyData,
+          currentRound: result.storyData.currentRound || 1,
+          branchOptions: result.storyData.branchOptions || [],
+          isStoryCompleted: result.storyData.isCompleted || false,
+          showCozeStory: true,
+          cozeStoryContent: result.storyContent || result.interpretation || ''
+        });
+        return;
+      }
+
+      // 否则使用解析器解析
+      if (result.rawCozeResponse) {
+        const parsedStory = parseCozeResponse(result.rawCozeResponse, 'story');
+        
+        console.log('解析后的故事数据:', parsedStory);
+        
+        this.setData({
+          storyData: parsedStory,
+          currentRound: parsedStory.currentRound || 1,
+          branchOptions: parsedStory.branchOptions || [],
+          isStoryCompleted: parsedStory.isCompleted || false,
+          showCozeStory: true,
+          cozeStoryContent: parsedStory.storyContent || result.interpretation || ''
+        });
+      } else {
+        console.warn('没有找到Coze响应内容');
+        // 即使没有故事数据，也显示基础分析结果
+        this.setData({
+          showCozeStory: true,
+          cozeStoryContent: result.interpretation || ''
+        });
+      }
+    } catch (error) {
+      console.error('解析故事失败:', error);
+      // 即使解析失败，也显示基础分析结果
+      this.setData({
+        showCozeStory: true,
+        cozeStoryContent: result.interpretation || ''
+      });
+    }
+  },
+
+  // 用户选择分支选项
+  async selectBranchOption(e) {
+    const index = e.currentTarget.dataset.index;
+    const selectedOption = this.data.branchOptions[index];
+    
+    if (!selectedOption) {
+      wx.showToast({
+        title: '选项无效',
+        icon: 'none'
+      });
+      return;
+    }
+
+    console.log('用户选择选项:', index, selectedOption);
+    
+    this.setData({
+      selectedOption: selectedOption,
+      isAnalyzing: true
+    });
+
+    wx.showLoading({
+      title: '正在展开平行宇宙...',
+      mask: true
+    });
+
+    try {
+      // 构造用户选择的消息
+      const userChoice = selectedOption.label || selectedOption.text || `选项${String.fromCharCode(65 + index)}`;
+      
+      console.log('发送用户选择到Coze:', userChoice);
+      
+      // 调用Coze API继续故事
+      // 注意：这里需要保持会话上下文，使用相同的conversationId
+      const nextResult = await analyzeDream(userChoice, false, 'story');
+      
+      console.log('获取到下一轮故事:', nextResult);
+      
+      // 更新故事显示
+      this.displayCozeStory(nextResult);
+      
+      wx.hideLoading();
+      
+    } catch (error) {
+      console.error('获取下一轮故事失败:', error);
+      wx.hideLoading();
+      this.setData({
+        isAnalyzing: false
+      });
+      
+      wx.showToast({
+        title: '故事展开失败，请重试',
+        icon: 'none'
+      });
+    }
+  },
+
+  // 隐藏Coze故事
+  hideCozeStory() {
+    this.setData({
+      showCozeStory: false
+    });
+  },
+
+  // 保存梦境
+  async saveDream() {
+    if (!this.data.isAnalyzed || !this.data.analysisResult) {
+      wx.showToast({
+        title: '请先分析梦境',
+        icon: 'none'
+      });
+      return;
+    }
+
+    wx.showLoading({
+      title: '保存中...',
+      mask: true
+    });
+
+    try {
+      const dreamData = {
+        content: this.data.dreamText,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        emotions: this.data.emotionTags,
+        tags: this.data.analysisResult.tags || [],
+        planetType: this.data.analysisResult.planetType || 'unknown',
+        planetName: this.data.analysisResult.planetName,
+        planetEmoji: this.data.analysisResult.planetEmoji,
+        interpretation: this.data.analysisResult.interpretation || '',
+        // 保存平行宇宙故事数据
+        storyData: this.data.storyData,
+        conversationId: this.data.conversationId
+      };
+
+      // 保存到云数据库
+      await saveDream(dreamData);
+
+      wx.hideLoading();
+      
+      wx.showToast({
+        title: '保存成功',
+        icon: 'success',
+        duration: 2000
+      });
+
+      // 刷新最近梦境列表
+      setTimeout(() => {
+        this.loadRecentDreams();
+      }, 500);
+
+    } catch (error) {
+      console.error('保存失败:', error);
+      wx.hideLoading();
+      
+      wx.showModal({
+        title: '保存失败',
+        content: `保存失败：${error.message}`,
+        showCancel: false
+      });
+    }
+  },
+
+  // 加载最近梦境
+  async loadRecentDreams() {
+    try {
+      const dreams = await getUserDreams(5); // 获取最近5条
+      
+      this.setData({
+        recentDreams: dreams.map(dream => ({
+          _id: dream._id,
+          date: dream.date,
+          time: dream.time,
+          emotion: dream.planetEmoji || '🌙',
+          preview: dream.content.substring(0, 50),
+          tags: dream.tags || [],
+          planetType: dream.planetType
+        }))
+      });
+    } catch (error) {
+      console.error('加载最近梦境失败:', error);
+    }
+  },
+
+  // 查看梦境详情
+  viewDream(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({
+      url: `/pages/dreams/detail/detail?id=${id}`
+    });
+  },
+
+  // 跳转到宇宙地图
+  goToMap() {
+    wx.navigateTo({
+      url: '/pages/universe/map/map'
+    });
+  },
+
+  // 跳转到统计页面
+  goToAnalytics() {
+    wx.navigateTo({
+      url: '/pages/analytics/analytics'
+    });
+  },
+
+  // 语音录制相关方法（保持原有实现）
+  startRecordingPress(e) {
+    if (this.data.isRecording) return;
+    
     wx.getSetting({
       success: (res) => {
         if (res.authSetting['scope.record'] === false) {
           wx.showModal({
             title: '需要录音权限',
-            content: '请允许使用录音功能来记录梦境',
+            content: '请在设置中允许使用麦克风以进行语音记录',
             success: (modalRes) => {
-              if (modalRes.confirm) {
-                wx.openSetting();
-              }
+              if (modalRes.confirm) wx.openSetting();
             }
           });
           return;
         }
         
-        // 开始录音
+        if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
+        
+        const startY = (e && e.touches && e.touches[0]?.clientY) || 0;
+        
+        this.setData({ 
+          isLongPressRecording: true, 
+          canceledByGesture: false,
+          touchStartY: startY,
+          cancelSlide: false,
+          showRecordOverlay: true
+        });
+        
         this.startRecording();
       }
     });
   },
 
-  // 开始录音
+  stopRecordingPress() {
+    if (!this.data.isRecording) return;
+    this.setData({ isLongPressRecording: false, showRecordOverlay: false });
+    this.stopRecording();
+  },
+
+  onRecordingTouchMove(e) {
+    if (!this.data.isRecording) return;
+    const currentY = e.touches && e.touches[0]?.clientY;
+    if (typeof currentY !== 'number') return;
+    
+    const deltaY = currentY - this.data.touchStartY;
+    const shouldCancel = deltaY < -40;
+    
+    if (shouldCancel !== this.data.cancelSlide) {
+      this.setData({ cancelSlide: shouldCancel });
+    }
+  },
+
   startRecording() {
     const recorderManager = wx.getRecorderManager();
     
@@ -234,10 +420,7 @@ Page({
         isRecording: true,
         recordingDuration: 0
       });
-      
-      // 开始计时
       this.startRecordingTimer();
-      
       wx.showToast({
         title: '开始录音',
         icon: 'none',
@@ -251,51 +434,44 @@ Page({
         isRecording: false,
         audioPath: res.tempFilePath
       });
-      
-      // 停止计时
       this.stopRecordingTimer();
       
       if (this.data.canceledByGesture || this.data.cancelSlide) {
-        // 被取消的录音不进行识别
         this.setData({ canceledByGesture: false, cancelSlide: false });
         return;
       }
       
       wx.showToast({ title: '录音完成', icon: 'success', duration: 1200 });
-      // 自动进行语音识别
       this.performVoiceRecognition(res.tempFilePath);
     });
 
     recorderManager.onError((err) => {
       console.error('录音错误:', err);
-      this.setData({
-        isRecording: false
-      });
+      this.setData({ isRecording: false });
       this.stopRecordingTimer();
-      
       wx.showToast({
         title: '录音失败',
         icon: 'none'
       });
     });
 
-    // 开始录音
     recorderManager.start({
-      duration: 60000, // 最长60秒
+      duration: 60000,
       sampleRate: 16000,
       numberOfChannels: 1,
       encodeBitRate: 96000,
       format: 'mp3'
     });
+
+    this.recorderManager = recorderManager;
   },
 
-  // 停止录音
   stopRecording() {
-    const recorderManager = wx.getRecorderManager();
-    recorderManager.stop();
+    if (this.recorderManager) {
+      this.recorderManager.stop();
+    }
   },
 
-  // 开始录音计时
   startRecordingTimer() {
     this.data.recordingTimer = setInterval(() => {
       this.setData({
@@ -304,576 +480,316 @@ Page({
     }, 1000);
   },
 
-  // 停止录音计时
   stopRecordingTimer() {
     if (this.data.recordingTimer) {
       clearInterval(this.data.recordingTimer);
-      this.setData({
-        recordingTimer: null
-      });
+      this.data.recordingTimer = null;
     }
   },
 
-  // 播放录音
-  playRecording() {
-    if (!this.data.audioPath) {
-      wx.showToast({
-        title: '没有录音文件',
-        icon: 'none'
-      });
-      return;
-    }
-
-    const audioContext = wx.createInnerAudioContext();
-    
-    audioContext.src = this.data.audioPath;
-    
-    audioContext.onPlay(() => {
-      console.log('开始播放');
-      this.setData({
-        isPlaying: true,
-        playDuration: 0
-      });
-      this.startPlayTimer();
-    });
-
-    audioContext.onEnded(() => {
-      console.log('播放结束');
-      this.setData({
-        isPlaying: false
-      });
-      this.stopPlayTimer();
-      audioContext.destroy();
-    });
-
-    audioContext.onError((err) => {
-      console.error('播放错误:', err);
-      this.setData({
-        isPlaying: false
-      });
-      this.stopPlayTimer();
-      audioContext.destroy();
-      
-      wx.showToast({
-        title: '播放失败',
-        icon: 'none'
-      });
-    });
-
-    audioContext.play();
-  },
-
-  // 停止播放
-  stopPlayback() {
-    const audioContext = wx.createInnerAudioContext();
-    audioContext.stop();
-    audioContext.destroy();
-    
-    this.setData({
-      isPlaying: false
-    });
-    this.stopPlayTimer();
-  },
-
-  // 开始播放计时
-  startPlayTimer() {
-    this.data.playTimer = setInterval(() => {
-      this.setData({
-        playDuration: this.data.playDuration + 1
-      });
-    }, 1000);
-  },
-
-  // 停止播放计时
-  stopPlayTimer() {
-    if (this.data.playTimer) {
-      clearInterval(this.data.playTimer);
-      this.setData({
-        playTimer: null
-      });
-    }
-  },
-
-  // 语音识别转文字
-  performVoiceRecognition(audioPath) {
+  async performVoiceRecognition(filePath) {
     wx.showLoading({
       title: '识别中...',
       mask: true
     });
 
-    // 使用微信的语音识别API
-    wx.uploadFile({
-      url: 'https://api.weixin.qq.com/cgi-bin/media/voice/translatecontent',
-      filePath: audioPath,
-      name: 'media',
-      success: (res) => {
-        console.log('语音识别结果:', res);
-        wx.hideLoading();
+    try {
+      const result = await wx.cloud.getTempFileURL({
+        fileList: [filePath]
+      });
+
+      if (result.fileList && result.fileList[0]) {
+        const tempFileURL = result.fileList[0].tempFileURL;
+        console.log('语音文件URL:', tempFileURL);
         
-        try {
-          const result = JSON.parse(res.data);
-          if (result.err_code === 0 && result.result) {
-            // 识别成功，更新文本
-            this.setData({
-              dreamText: this.data.dreamText + result.result
-            });
+        wx.cloud.callFunction({
+          name: 'speechRecognition',
+          data: {
+            fileUrl: tempFileURL
+          },
+          success: (res) => {
+            console.log('语音识别结果:', res);
+            wx.hideLoading();
             
+            if (res.result && res.result.text) {
+              this.setData({
+                dreamText: this.data.dreamText + (this.data.dreamText ? '\n' : '') + res.result.text
+              });
+              
+              wx.showToast({
+                title: '识别成功',
+                icon: 'success',
+                duration: 1500
+              });
+            }
+          },
+          fail: (err) => {
+            console.error('语音识别失败:', err);
+            wx.hideLoading();
             wx.showToast({
-              title: '识别成功',
-              icon: 'success'
-            });
-          } else {
-            throw new Error(result.err_msg || '识别失败');
-          }
-        } catch (error) {
-          console.error('语音识别解析失败:', error);
-          wx.showToast({
-            title: '识别失败，请重试',
-            icon: 'none'
-          });
-        }
-      },
-      fail: (err) => {
-        console.error('语音识别请求失败:', err);
-        wx.hideLoading();
-        wx.showToast({
-          title: '识别失败',
-          icon: 'none'
-        });
-      }
-    });
-  },
-
-  // 删除录音
-  deleteRecording() {
-    if (this.data.audioPath) {
-      wx.removeSavedFile({
-        filePath: this.data.audioPath,
-        success: () => {
-          console.log('录音文件删除成功');
-        }
-      });
-    }
-    
-    this.setData({
-      audioPath: '',
-      recordingDuration: 0,
-      playDuration: 0
-    });
-  },
-
-
-  // 保存梦境
-  async saveDream(e) {
-    console.log('点击保存按钮', e);
-    if (!this.data.dreamText.trim()) {
-      wx.showToast({
-        title: '请输入梦境内容',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 检查是否已分析
-    if (!this.data.isAnalyzed || !this.data.analysisResult) {
-      wx.showModal({
-        title: '提示',
-        content: '请先进行AI分析，以便生成对应的星球',
-        showCancel: true,
-        cancelText: '直接保存',
-        confirmText: '去分析',
-        success: (res) => {
-          if (res.confirm) {
-            // 用户选择去分析
-            this.analyzeDream();
-          } else {
-            // 用户选择直接保存（使用默认配置）
-            this.saveDreamWithoutAnalysis();
-          }
-        }
-      });
-      return;
-    }
-
-    wx.showLoading({
-      title: '保存中...',
-      mask: true
-    });
-
-    try {
-      const analysisResult = this.data.analysisResult;
-      
-      // 获取星球配置
-      const planetConfig = getPlanetConfig(analysisResult.planetType);
-      
-      // 准备梦境数据
-      const dreamData = {
-        content: this.data.dreamText,
-        date: this.formatDate(new Date()),
-        time: this.formatTime(new Date()),
-        emotions: analysisResult.emotions || [],
-        tags: analysisResult.tags || [],
-        interpretation: analysisResult.interpretation || '',
-        planetType: analysisResult.planetType,
-        planetName: planetConfig.name,
-        emoji: planetConfig.emoji,
-        color: planetConfig.color,
-        description: planetConfig.description,
-        audioPath: this.data.audioPath // 包含语音文件路径
-      };
-      
-      // 保存到云数据库
-      await saveDream(dreamData);
-      
-      wx.hideLoading();
-      wx.showToast({
-        title: `已保存到${planetConfig.name}`,
-        icon: 'success',
-        duration: 2000
-      });
-      
-      // 清空输入
-      this.setData({
-        dreamText: '',
-        isAnalyzed: false,
-        isAnalyzing: false,
-        emotionTags: [],
-        analysisResult: null,
-        audioPath: '',
-        recordingDuration: 0,
-        playDuration: 0
-      });
-
-      // 刷新列表
-      this.loadRecentDreams();
-    } catch (error) {
-      console.error('保存失败:', error);
-      wx.hideLoading();
-      wx.showToast({
-        title: '保存失败，请重试',
-        icon: 'none',
-        duration: 2000
-      });
-    }
-  },
-
-  // 不分析直接保存（使用默认配置）
-  async saveDreamWithoutAnalysis() {
-    wx.showLoading({
-      title: '保存中...',
-      mask: true
-    });
-
-    try {
-      // 获取默认星球配置
-      const planetConfig = getPlanetConfig('奇幻星球');
-      
-      // 准备梦境数据
-      const dreamData = {
-        content: this.data.dreamText,
-        date: this.formatDate(new Date()),
-        time: this.formatTime(new Date()),
-        emotions: [],
-        tags: [],
-        interpretation: '',
-        planetType: '奇幻星球',
-        planetName: planetConfig.name,
-        emoji: planetConfig.emoji,
-        color: planetConfig.color,
-        description: planetConfig.description,
-        audioPath: this.data.audioPath
-      };
-      
-      // 保存到云数据库
-      await saveDream(dreamData);
-      
-      wx.hideLoading();
-      wx.showToast({
-        title: '保存成功',
-        icon: 'success'
-      });
-      
-      // 清空输入
-      this.setData({
-        dreamText: '',
-        isAnalyzed: false,
-        emotionTags: [],
-        analysisResult: null,
-        audioPath: '',
-        recordingDuration: 0,
-        playDuration: 0
-      });
-
-      // 刷新列表
-      this.loadRecentDreams();
-    } catch (error) {
-      console.error('保存失败:', error);
-      wx.hideLoading();
-      wx.showToast({
-        title: '保存失败，请重试',
-        icon: 'none',
-        duration: 2000
-      });
-    }
-  },
-
-  // 加载最近梦境 - 增强版
-  async loadRecentDreams() {
-    try {
-      const dreams = await getUserDreams(10);
-      
-      // 格式化数据 - 增强版
-      const formattedDreams = dreams.map(dream => {
-        try {
-          return {
-            id: dream._id,
-            date: this.formatDisplayDate(dream.date),
-            time: this.formatTime(dream.date),
-            preview: dream.content ? dream.content.substring(0, 50) : '无内容',
-            hasMore: dream.content && dream.content.length > 50,
-            tags: dream.tags || [],
-            emotion: this.getEmotionIcon(dream.emotions),
-            content: dream.content || ''
-          };
-        } catch (error) {
-          console.warn('格式化梦境数据失败:', error, dream);
-          // 返回安全的默认数据
-          return {
-            id: dream._id || 'unknown',
-            date: '未知日期',
-            time: '00:00',
-            preview: '数据加载失败',
-            hasMore: false,
-            tags: [],
-            emotion: '😐',
-            content: ''
-          };
-        }
-      });
-      
-      this.setData({
-        recentDreams: formattedDreams
-      });
-    } catch (error) {
-      console.error('加载梦境失败:', error);
-      // 设置空数据，避免界面崩溃
-      this.setData({
-        recentDreams: []
-      });
-    }
-  },
-
-  // 获取情绪图标 - 增强错误处理
-  getEmotionIcon(emotions) {
-    try {
-      // 检查输入参数
-      if (!emotions) return '';
-      if (!Array.isArray(emotions)) return '';
-      if (emotions.length === 0) return '';
-      
-      // 获取第一个情绪，确保是字符串类型
-      let emotion = emotions[0];
-      
-      // 如果emotion是对象，尝试获取name或value属性
-      if (typeof emotion === 'object' && emotion !== null) {
-        emotion = emotion.name || emotion.value || emotion.text || '';
-      }
-      
-      // 确保emotion是字符串
-      emotion = String(emotion || '');
-      
-      // 如果为空字符串，返回默认图标
-      if (!emotion.trim()) return '😐';
-      
-      // 情绪匹配
-      if (emotion.includes('快乐') || emotion.includes('开心') || emotion.includes('高兴')) return '😊';
-      if (emotion.includes('悲伤') || emotion.includes('难过') || emotion.includes('伤心')) return '😢';
-      if (emotion.includes('恐惧') || emotion.includes('害怕') || emotion.includes('惊恐')) return '😨';
-      if (emotion.includes('愤怒') || emotion.includes('生气') || emotion.includes('恼火')) return '😠';
-      if (emotion.includes('惊讶') || emotion.includes('震惊') || emotion.includes('吃惊')) return '😲';
-      if (emotion.includes('平静') || emotion.includes('安静') || emotion.includes('平和')) return '😌';
-      if (emotion.includes('兴奋') || emotion.includes('激动') || emotion.includes('兴奋')) return '🤩';
-      
-      return '😐'; // 默认情绪图标
-    } catch (error) {
-      console.warn('获取情绪图标失败:', error);
-      return '😐'; // 出错时返回默认图标
-    }
-  },
-
-  // 查看梦境详情
-  viewDreamDetail(e) {
-    const dreamId = e.currentTarget.dataset.id;
-    wx.navigateTo({
-      url: `/pages/dreams/detail/detail?id=${dreamId}`
-    });
-  },
-
-  // 前往宇宙地图
-  goToUniverse(e) {
-    wx.navigateTo({
-      url: '/pages/universe/map/map',
-      fail: (err) => {
-        console.error('跳转宇宙地图失败：', err)
-        wx.showToast({
-          title: '跳转失败，请重试',
-          icon: 'none'
-        })
-      }
-    });
-  },
-
-  // 前往统计分析页面
-  goToAnalytics() {
-    wx.navigateTo({
-      url: '/pages/analytics/analytics',
-      fail: (err) => {
-        console.error('跳转分析页面失败：', err)
-        wx.showToast({
-          title: '跳转失败，请重试',
-          icon: 'none'
-        })
-      }
-    });
-  },
-
-  // 开始梦境引导
-  startDreamGuidance() {
-    wx.showToast({
-      title: '梦境引导功能开发中',
-      icon: 'none'
-    });
-  },
-
-
-  // 格式化日期
-  formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  },
-
-  // 格式化时间
-  formatTime(date) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  },
-
-  // 格式化显示日期
-  formatDisplayDate(dateStr) {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return '今天';
-    if (days === 1) return '昨天';
-    if (days < 7) return `${days}天前`;
-    
-    return dateStr;
-  },
-
-  // ========== 新增的交互方法 ==========
-  
-  // 格式化时间
-  formatTime(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  },
-
-  // 编辑梦境
-  editDream(e) {
-    const dreamId = e.currentTarget.dataset.id;
-    wx.showToast({
-      title: '编辑功能开发中',
-      icon: 'none'
-    });
-  },
-
-  // 删除梦境
-  deleteDream(e) {
-    const dreamId = e.currentTarget.dataset.id;
-    
-    wx.showModal({
-      title: '确认删除',
-      content: '确定要删除这个梦境吗？',
-      success: (res) => {
-        if (res.confirm) {
-          // TODO: 实现删除功能
-          wx.showToast({
-            title: '删除成功',
-            icon: 'success'
-          });
-          this.loadRecentDreams();
-        }
-      }
-    });
-  },
-
-  // 打开文本编辑器
-  openTextEditor() {
-    wx.showToast({
-      title: '文本编辑器开发中',
-      icon: 'none'
-    });
-  },
-
-  // 添加文本模板
-  addTextTemplate(e) {
-    console.log('点击添加模板按钮', e);
-    const templates = [
-      '我梦见自己在...',
-      '梦里我看到了...',
-      '我梦到和...',
-      '在梦中我...'
-    ];
-    
-    const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
-    this.setData({
-      dreamText: this.data.dreamText + randomTemplate
-    });
-    
-    wx.showToast({
-      title: '已添加模板',
-      icon: 'success',
-      duration: 1000
-    });
-  },
-
-  // 合并梦境
-  mergeDreams() {
-    wx.showToast({
-      title: '合并功能开发中',
-      icon: 'none'
-    });
-  },
-
-  // 返回上一页
-  onBack() {
-    const pages = getCurrentPages();
-    if (pages.length > 1) {
-      wx.navigateBack();
-    } else {
-      // 如果是首页，可以关闭小程序或提示
-      wx.showModal({
-        title: '提示',
-        content: '确定要退出小程序吗？',
-        success: (res) => {
-          if (res.confirm) {
-            // 关闭小程序（需要用户手动操作）
-            wx.showToast({
-              title: '请手动关闭小程序',
+              title: '识别失败',
               icon: 'none'
             });
           }
-        }
+        });
+      }
+    } catch (error) {
+      console.error('语音识别错误:', error);
+      wx.hideLoading();
+      wx.showToast({
+        title: '识别失败',
+        icon: 'none'
       });
     }
-  }
+  },
 
-})
+  togglePlay() {
+    if (this.data.isPlaying) {
+      this.stopPlayAudio();
+    } else {
+      this.playAudio();
+    }
+  },
+
+  playAudio() {
+    if (!this.data.audioPath) return;
+    
+    const innerAudioContext = wx.createInnerAudioContext();
+    innerAudioContext.src = this.data.audioPath;
+    
+    innerAudioContext.onPlay(() => {
+      console.log('音频播放开始');
+      this.setData({ isPlaying: true });
+    });
+    
+    innerAudioContext.onEnded(() => {
+      console.log('音频播放结束');
+      this.setData({ isPlaying: false });
+    });
+    
+    innerAudioContext.onError((err) => {
+      console.error('音频播放错误:', err);
+      this.setData({ isPlaying: false });
+      wx.showToast({
+        title: '播放失败',
+        icon: 'none'
+      });
+    });
+    
+    innerAudioContext.play();
+    this.audioContext = innerAudioContext;
+  },
+
+  stopPlayAudio() {
+    if (this.audioContext) {
+      this.audioContext.stop();
+      this.audioContext.destroy();
+      this.audioContext = null;
+    }
+    this.setData({ isPlaying: false });
+  },
+
+  deleteRecording() {
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这段录音吗？',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({
+            audioPath: '',
+            isPlaying: false,
+            recordingDuration: 0
+          });
+          
+          wx.showToast({
+            title: '已删除',
+            icon: 'success'
+          });
+        }
+      }
+    });
+  },
+
+// 手动输入选项 - 处理输入
+onOptionInput(e) {
+  const inputValue = e.detail.value.trim().toUpperCase();
+  console.log('用户输入选项:', inputValue);
+  
+  // 验证输入是否为有效的选项（A/B/C/D）
+  const validOptions = ['A', 'B', 'C', 'D'];
+  const isValid = validOptions.includes(inputValue);
+  
+  if (!isValid && inputValue) {
+    console.warn('无效的选项输入:', inputValue);
+    // 可以添加震动反馈
+    wx.vibrateShort({
+      type: 'light'
+    });
+  }
+  
+  this.setData({
+    optionInput: inputValue
+  });
+},
+
+// 手动输入选项 - 提交
+submitOption() {
+  const optionInput = this.data.optionInput ? this.data.optionInput.trim().toUpperCase() : '';
+  
+  if (!optionInput) {
+    console.warn('选项输入为空');
+    wx.showToast({
+      title: '请输入选项（A/B/C/D）',
+      icon: 'none'
+    });
+    return;
+  }
+  
+  // 验证输入是否为有效的选项
+  const validOptions = ['A', 'B', 'C', 'D'];
+  if (!validOptions.includes(optionInput)) {
+    console.warn('无效的选项:', optionInput);
+    wx.showToast({
+      title: '请输入有效选项（A/B/C/D）',
+      icon: 'none'
+    });
+    return;
+  }
+  
+  console.log('用户提交选项:', optionInput);
+  
+  // 清空输入框
+  this.setData({
+    optionInput: ''
+  });
+  
+  // 继续故事
+  this.continueCozeStory(optionInput);
+}
+,
+
+// 选择分支选项
+selectCozeOption(e) {
+  const selectedIndex = e.currentTarget.dataset.index;
+  const selectedOption = this.data.cozeOptions[selectedIndex];
+  const selectedLabel = selectedOption.label;
+  
+  console.log('用户选择了选项:', selectedLabel, selectedOption);
+  
+  // 显示加载状态
+  wx.showLoading({
+    title: '正在穿越平行宇宙...',
+    mask: true
+  });
+  
+  // 添加到对话历史
+  const conversationHistory = this.data.cozeConversationHistory || [];
+  conversationHistory.push({
+    role: 'user',
+    content: selectedLabel
+  });
+  
+  this.setData({
+    cozeConversationHistory: conversationHistory
+  });
+  
+  // 继续故事
+  this.continueCozeStory(selectedLabel);
+},
+
+// 继续平行宇宙故事
+async continueCozeStory(selection) {
+  try {
+    console.log('继续平行宇宙故事，选择:', selection);
+    
+    // 调用Coze API继续故事
+    const result = await analyzeDream(
+      selection,
+      false, // 不是首次分析
+      'story', // 故事模式
+      this.data.cozeConversationHistory || []
+    );
+    
+    console.log('继续故事返回结果:', result);
+    
+    // 解析新的响应
+    const parsedResponse = parseCozeResponse(result.rawCozeResponse || '', 'story');
+    
+    console.log('解析后的响应:', parsedResponse);
+    
+    // 构建新的分支选项
+    let newOptions = [];
+    if (parsedResponse && parsedResponse.branchOptions && parsedResponse.branchOptions.length > 0) {
+      newOptions = parsedResponse.branchOptions.map(opt => ({
+        label: opt.label,
+        text: opt.text,
+        icon: opt.icon || '✨'
+      }));
+    }
+    
+    console.log('新的分支选项:', newOptions);
+    
+    // 添加到对话历史
+    const conversationHistory = this.data.cozeConversationHistory || [];
+    conversationHistory.push({
+      role: 'user',
+      content: selection
+    });
+    conversationHistory.push({
+      role: 'assistant',
+      content: result.rawCozeResponse || ''
+    });
+    
+    // 更新页面数据
+    this.setData({
+      cozeStoryContent: parsedResponse?.storyContent || result.rawCozeResponse || '',
+      cozeOptions: newOptions,
+      currentRound: (parsedResponse?.roundInfo?.current || this.data.currentRound || 0) + 1,
+      totalRounds: parsedResponse?.roundInfo?.total || this.data.totalRounds || 5,
+      hasBranchOptions: newOptions.length > 0,
+      isFinalRound: parsedResponse?.isCompleted || false,
+      cozeConversationHistory: conversationHistory
+    });
+    
+    wx.hideLoading();
+    
+    // 滚动到底部
+    wx.pageScrollTo({
+      scrollTop: 9999,
+      duration: 300
+    });
+    
+  } catch (error) {
+    console.error('继续故事失败:', error);
+    wx.hideLoading();
+    wx.showToast({
+      title: '平行宇宙连接失败',
+      icon: 'none'
+    });
+  }
+},
+
+
+  addTemplate() {
+    wx.showActionSheet({
+      itemList: [
+        '飞翔梦境',
+        '海洋梦境',
+        '森林梦境',
+        '迷宫梦境'
+      ],
+      success: (res) => {
+        const templates = [
+          '梦见自己在天空中自由飞翔，周围是彩色的云朵，风从耳边呼啸而过。',
+          '梦见自己在深海中游泳，周围是各种美丽的鱼群，海水清澈透明。',
+          '梦见自己在茂密的森林中漫步，阳光透过树叶洒下斑驳的光影。',
+          '梦见在一个巨大的迷宫中寻找出口，感到焦虑和困惑。'
+        ];
+        
+        this.setData({
+          dreamText: templates[res.tapIndex]
+        });
+      }
+    });
+  }
+});

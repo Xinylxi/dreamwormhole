@@ -190,4 +190,56 @@
       <view class="interaction-arrow">→</view>
     </view>
   </view>
+
+  <!-- Coze平行宇宙故事展示区域 -->
+  <view class="coze-story-section" wx:if="{{showCozeStory && cozeStoryContent}}">
+    <!-- 故事头部 -->
+    <view class="coze-story-header">
+      <view class="coze-story-title-row">
+        <text class="coze-story-icon">🌌</text>
+        <text class="coze-story-title">平行宇宙故事</text>
+      </view>
+      <view class="coze-story-close" bindtap="hideCozeStory">
+        <text class="close-icon">✕</text>
+      </view>
+    </view>
+    
+    <!-- 故事内容 -->
+    <view class="coze-story-content">
+      <text class="story-text" user-select>{{cozeStoryContent}}</text>
+    </view>
+    
+    <!-- 分支选项容器 -->
+        <!-- 手动输入选项区域 -->
+    <!-- Coze分支选项 - 点击式 -->
+    <view class="coze-options-container" wx:if="{{hasBranchOptions && !isFinalRound}}">
+      <view class="options-title">请选择一个选项继续平行宇宙之旅：</view>
+      
+      <view class="branch-options">
+        <block wx:for="{{cozeOptions}}" wx:key="index">
+          <view 
+            class="branch-option-item" 
+            bindtap="selectCozeOption" 
+            data-index="{{index}}"
+            data-label="{{item.label}}"
+            hover-class="option-hover"
+          >
+            <view class="option-header">
+              <view class="option-badge">{{item.label}}</view>
+              <view class="option-icon">→</view>
+            </view>
+            <view class="option-content">
+              <text class="option-text">{{item.description}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+    </view>
+    
+    <!-- 底部提示 -->
+    <view class="coze-story-footer">
+      <text class="footer-text">梦境是平行时空的扭曲，每一次选择都是最好的</text>
+    </view>
+  </view>
+
 </scroll-view>
