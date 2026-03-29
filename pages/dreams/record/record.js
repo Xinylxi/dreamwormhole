@@ -16,16 +16,24 @@ Page({
     // Coze 平行宇宙故事相关
     showCozeStory: false,
     optionInput: "",
-    cozeStoryContent: '',
-    storyData: null,          // 存储解析后的故事数据
-    currentRound: 0,          // 当前轮数
-    totalRounds: 10,          // 总轮数
-    branchOptions: [],        // 分支选项列表
-    isStoryCompleted: false,  // 故事是否完成
-    selectedOption: null,     // 用户选择的选项
+    cozeStoryContent: '',           // 完整的故事内容（累积所有轮次）
+    currentRoundStory: '',           // 当前轮次的故事内容
+    storyData: null,                 // 存储解析后的故事数据
+    currentRound: 0,                 // 当前轮数
+    totalRounds: 10,                 // 总轮数
+    branchOptions: [],               // 分支选项列表（旧版，保持兼容）
+    isStoryCompleted: false,         // 故事是否完成
+    selectedOption: null,            // 用户选择的选项
     
     // 会话ID（用于保持Coze对话上下文）
     conversationId: null,
+    
+    // Coze 交互增强字段（新增）
+    hasBranchOptions: false,         // 是否有分支选项
+    isFinalRound: false,             // 是否是最后一轮
+    cozeOptions: [],                 // 分支选项数组（仅包含A/B/C/D四个选项）
+    cozeConversationHistory: [],     // 对话历史记录
+    isAnalyzingChoice: false,         // 分析选择时的加载状态
     
     // 语音录制相关
     isRecording: false,
@@ -45,11 +53,11 @@ Page({
     cancelSlide: false,
     showRecordOverlay: false
   },
-
+  
   onLoad() {
     this.loadRecentDreams();
   },
-
+  
   // 输入梦境文本
   onDreamInput(e) {
     this.setData({
@@ -59,7 +67,7 @@ Page({
       emotionTags: []
     });
   },
-
+  
   // AI分析梦境（第一轮）
   async analyzeDream(e) {
     console.log('点击AI分析按钮');
@@ -73,16 +81,16 @@ Page({
       });
       return;
     }
-
+    
     this.setData({
       isAnalyzing: true
     });
-
+    
     wx.showLoading({
       title: 'AI正在分析梦境...',
       mask: true
     });
-
+    
     try {
       console.log('开始分析梦境，内容:', this.data.dreamText);
       
@@ -90,6 +98,14 @@ Page({
       const result = await analyzeDream(this.data.dreamText, false, 'story');
       
       console.log('分析成功，结果:', result);
+      
+      // 保存会话ID（用于保持对话上下文）
+      if (result.conversationId) {
+        console.log('保存会话ID:', result.conversationId);
+        this.setData({
+          conversationId: result.conversationId
+        });
+      }
       
       // 获取星球配置
       const planetConfig = getPlanetConfig(result.planetType || 'unknown');
@@ -142,61 +158,148 @@ Page({
       });
     }
   },
-
-  // 显示Coze平行宇宙故事
+  
+  // 显示Coze平行宇宙故事 ✅ 语法已修复
   displayCozeStory(result) {
     console.log('开始解析Coze响应...');
     
     try {
+      let storyContent = '';
+      let options = [];
+      let isCompleted = false;
+      
       // 如果result已经包含解析好的故事数据
       if (result.storyData) {
+        options = result.storyData.branchOptions || [];
+        storyContent = result.storyContent || result.interpretation || '';
+        isCompleted = result.storyData.isCompleted || false;
+        
         this.setData({
           storyData: result.storyData,
           currentRound: result.storyData.currentRound || 1,
           branchOptions: result.storyData.branchOptions || [],
-          isStoryCompleted: result.storyData.isCompleted || false,
+          isStoryCompleted: isCompleted,
           showCozeStory: true,
-          cozeStoryContent: result.storyContent || result.interpretation || ''
+          currentRoundStory: storyContent,
+          cozeStoryContent: storyContent, // 第一轮直接使用
+          hasBranchOptions: options.length > 0,
+          cozeOptions: options.map(opt => ({
+            label: opt.label,
+            text: opt.text,
+            description: opt.text
+          }))
         });
         return;
       }
-
+      
       // 否则使用解析器解析
-      if (result.rawCozeResponse) {
-        const parsedStory = parseCozeResponse(result.rawCozeResponse, 'story');
-        
+      // 优先使用rawCozeResponse，如果不存在则使用rawResponse或interpretation
+      let rawResponse = result.rawCozeResponse || result.rawResponse || result.interpretation || '';
+
+      console.log('使用的原始响应:', rawResponse.substring(0, 100));
+
+      if (rawResponse) {
+        const parsedStory = parseCozeResponse(rawResponse, 'story');
+
         console.log('解析后的故事数据:', parsedStory);
-        
-        this.setData({
-          storyData: parsedStory,
-          currentRound: parsedStory.currentRound || 1,
-          branchOptions: parsedStory.branchOptions || [],
-          isStoryCompleted: parsedStory.isCompleted || false,
-          showCozeStory: true,
-          cozeStoryContent: parsedStory.storyContent || result.interpretation || ''
-        });
-      } else {
-        console.warn('没有找到Coze响应内容');
-        // 即使没有故事数据，也显示基础分析结果
-        this.setData({
-          showCozeStory: true,
-          cozeStoryContent: result.interpretation || ''
-        });
+
+        // 如果解析器成功提取了分支选项，使用解析结果
+        if (parsedStory && parsedStory.branchOptions && parsedStory.branchOptions.length > 0) {
+          options = parsedStory.branchOptions || [];
+          storyContent = parsedStory.storyContent || rawResponse;
+          isCompleted = parsedStory.isCompleted || false;
+
+          // 初始化对话历史：第一轮的对话
+          const conversationHistory = [
+            {
+              role: 'user',
+              content: this.data.dreamText || '用户的梦境内容'
+            },
+            {
+              role: 'assistant',
+              content: rawResponse
+            }
+          ];
+
+          this.setData({
+            storyData: parsedStory,
+            currentRound: parsedStory.currentRound || 1,
+            branchOptions: parsedStory.branchOptions || [],
+            isStoryCompleted: isCompleted,
+            showCozeStory: true,
+            currentRoundStory: storyContent,
+            cozeStoryContent: storyContent,
+            hasBranchOptions: options.length > 0,
+            isFinalRound: isCompleted,
+            cozeOptions: options.map(opt => ({
+              label: opt.label,
+              text: opt.text,
+              description: opt.text,
+              icon: opt.icon || '✨'
+            })),
+            cozeConversationHistory: conversationHistory  // 保存对话历史
+          });
+          return;
+        }
+
+        // 如果解析器未能提取分支选项，尝试从纯文本中手动提取
+        console.log('解析器未能提取分支选项，尝试手动提取...');
+        options = this.extractOptionsFromText(rawResponse);
+
+        if (options.length > 0) {
+          console.log('成功手动提取分支选项:', options);
+          storyContent = rawResponse;
+
+          // 初始化对话历史：第一轮的对话
+          const conversationHistory = [
+            {
+              role: 'user',
+              content: this.data.dreamText || '用户的梦境内容'
+            },
+            {
+              role: 'assistant',
+              content: rawResponse
+            }
+          ];
+
+          this.setData({
+            showCozeStory: true,
+            currentRoundStory: storyContent,
+            cozeStoryContent: storyContent,
+            hasBranchOptions: true,
+            isFinalRound: false,
+            cozeOptions: options,
+            cozeConversationHistory: conversationHistory  // 保存对话历史
+          });
+          return;
+        }
       }
+
+      console.warn('没有找到Coze响应内容或无法提取分支选项');
+      // 即使没有故事数据，也显示基础分析结果
+      this.setData({
+        showCozeStory: true,
+        currentRoundStory: result.interpretation || '',
+        cozeStoryContent: result.interpretation || '',
+        hasBranchOptions: false
+      });
     } catch (error) {
       console.error('解析故事失败:', error);
       // 即使解析失败，也显示基础分析结果
       this.setData({
         showCozeStory: true,
-        cozeStoryContent: result.interpretation || ''
+        currentRoundStory: result.interpretation || '',
+        cozeStoryContent: result.interpretation || '',
+        hasBranchOptions: false
       });
     }
   },
-
-  // 用户选择分支选项
-  async selectBranchOption(e) {
-    const index = e.currentTarget.dataset.index;
-    const selectedOption = this.data.branchOptions[index];
+  
+  // 用户选择分支选项（ABCD按钮点击）
+  async selectCozeOption(e) {
+    const selectedIndex = e.currentTarget.dataset.index;
+    const selectedOption = this.data.cozeOptions[selectedIndex];
+    const selectedLabel = selectedOption.label;
     
     if (!selectedOption) {
       wx.showToast({
@@ -205,57 +308,214 @@ Page({
       });
       return;
     }
-
-    console.log('用户选择选项:', index, selectedOption);
     
-    this.setData({
-      selectedOption: selectedOption,
-      isAnalyzing: true
+    console.log('用户选择了选项:', selectedIndex, selectedLabel, selectedOption);
+    
+    // 显示加载状态
+    this.setData({ 
+      isAnalyzingChoice: true 
     });
-
+    
     wx.showLoading({
-      title: '正在展开平行宇宙...',
+      title: '等待AI分析中...',
       mask: true
     });
-
+    
     try {
       // 构造用户选择的消息
-      const userChoice = selectedOption.label || selectedOption.text || `选项${String.fromCharCode(65 + index)}`;
+      const userChoice = selectedLabel || `选项${String.fromCharCode(65 + selectedIndex)}`;
       
       console.log('发送用户选择到Coze:', userChoice);
       
-      // 调用Coze API继续故事
-      // 注意：这里需要保持会话上下文，使用相同的conversationId
-      const nextResult = await analyzeDream(userChoice, false, 'story');
+      // 添加用户选择到对话历史
+      const conversationHistory = this.data.cozeConversationHistory || [];
+      
+      // 检查是否有之前的对话历史，如果没有，说明这是第一轮后的选择
+      if (conversationHistory.length === 0) {
+        // 如果没有对话历史，说明第一轮分析时没有正确保存
+        // 我们需要重新构建对话历史
+        conversationHistory.push({
+          role: 'user',
+          content: this.data.dreamText
+        });
+        conversationHistory.push({
+          role: 'assistant',
+          content: this.data.cozeStoryContent
+        });
+      }
+      
+      // 添加当前用户选择
+      conversationHistory.push({
+        role: 'user',
+        content: `用户选择了选项：${userChoice}`
+      });
+      
+      console.log('完整对话历史:', conversationHistory);
+      
+      // 调用Coze API继续故事（使用相同的会话ID保持上下文）
+      // 关键：传递conversationId，确保在同一个会话中继续对话
+      const nextResult = await analyzeDream(userChoice, false, 'story', conversationHistory, this.data.conversationId);
       
       console.log('获取到下一轮故事:', nextResult);
       
-      // 更新故事显示
-      this.displayCozeStory(nextResult);
+      // 如果返回了新的会话ID，更新保存
+      if (nextResult.conversationId) {
+        console.log('更新会话ID:', nextResult.conversationId);
+        this.setData({
+          conversationId: nextResult.conversationId
+        });
+      }
+      
+      // 解析新的响应
+      let parsedResponse = null;
+      if (nextResult.rawCozeResponse) {
+        parsedResponse = parseCozeResponse(nextResult.rawCozeResponse, 'story');
+      }
+      
+      console.log('解析后的响应:', parsedResponse);
+      
+      // 获取当前轮次的故事内容
+      const newStoryContent = parsedResponse?.storyContent || nextResult.rawResponse || nextResult.interpretation || '';
+      
+      // 构建新的分支选项
+      let newOptions = [];
+      let isCompleted = false;
+      
+      if (parsedResponse && parsedResponse.branchOptions && parsedResponse.branchOptions.length > 0) {
+        newOptions = parsedResponse.branchOptions.map(opt => ({
+          label: opt.label,
+          text: opt.text,
+          description: opt.text,
+          icon: opt.icon || '✨'
+        }));
+      } else {
+        // 如果解析器未能提取选项，尝试手动提取
+        if (nextResult.rawResponse || nextResult.interpretation) {
+          const rawText = nextResult.rawResponse || nextResult.interpretation;
+          newOptions = this.extractOptionsFromText(rawText);
+        }
+      }
+      
+      isCompleted = parsedResponse?.isCompleted || false;
+      
+      console.log('新的分支选项:', newOptions, '是否完成:', isCompleted);
+      
+      // 更新对话历史
+      conversationHistory.push({
+        role: 'assistant',
+        content: nextResult.rawResponse || nextResult.interpretation || ''
+      });
+      
+      // 累积故事内容：在上一轮内容后面追加新的内容
+      const accumulatedStory = this.data.cozeStoryContent + '\n\n---\n\n' + newStoryContent;
+      
+      // 更新页面数据
+      this.setData({
+        currentRoundStory: newStoryContent,
+        cozeStoryContent: accumulatedStory, // 累积完整故事
+        cozeOptions: newOptions,
+        currentRound: (parsedResponse?.roundInfo?.current || this.data.currentRound || 0) + 1,
+        totalRounds: parsedResponse?.roundInfo?.total || this.data.totalRounds || 5,
+        hasBranchOptions: newOptions.length > 0,
+        isFinalRound: isCompleted,
+        cozeConversationHistory: conversationHistory,
+        isAnalyzingChoice: false
+      });
       
       wx.hideLoading();
+      
+      // 滚动到底部
+      wx.pageScrollTo({
+        scrollTop: 9999,
+        duration: 300
+      });
       
     } catch (error) {
       console.error('获取下一轮故事失败:', error);
       wx.hideLoading();
-      this.setData({
-        isAnalyzing: false
+      
+      this.setData({ 
+        isAnalyzingChoice: false 
       });
       
       wx.showToast({
-        title: '故事展开失败，请重试',
+        title: 'AI分析失败，请重试',
         icon: 'none'
       });
     }
   },
 
+  // 从纯文本中手动提取ABCD选项
+  extractOptionsFromText(text) {
+    console.log('开始从文本中提取选项:', text);
+
+    const options = [];
+    const optionPatterns = [
+      // 模式1: - **A. 选项**：描述 （最常见格式）
+      /(?:^|\n)\s*-\s*\*\*([A-D])\.\s*([^\*]+)\*\*[：:]\s*([^\n]+)/g,
+      // 模式2: - **A. 选项** 描述
+      /(?:^|\n)\s*-\s*\*\*([A-D])\.\s*([^\*]+)\*\*\s*([^\n]+)/g,
+      // 模式3: - A. 选项：描述
+      /(?:^|\n)\s*-\s*([A-D])\.\s*([^\n]+)[:：]\s*([^\n]+)/g,
+      // 模式4: - A. 选项 描述
+      /(?:^|\n)\s*-\s*([A-D])\.\s*([^\n]+)/g,
+      // 模式5: **A. 选项**：描述
+      /(?:^|\n)\s*\*\*([A-D])\.\s*([^\*]+)\*\*[：:]\s*([^\n]+)/g,
+      // 模式6: A. 选项：描述
+      /(?:^|\n)\s*([A-D])\.\s*([^\n]+)[:：]\s*([^\n]+)/g,
+      // 模式7: A. 选项 描述
+      /(?:^|\n)\s*([A-D])\.\s*([^\n]+)/g,
+      // 模式8: A、选项 描述
+      /(?:^|\n)\s*([A-D])、\s*([^\n]+)/g,
+      // 模式9: A: 选项 描述
+      /(?:^|\n)\s*([A-D])[:：]\s*([^\n]+)/g
+    ];
+
+    for (const pattern of optionPatterns) {
+      const matches = [...text.matchAll(pattern)];
+      console.log(`模式匹配结果:`, matches);
+
+      for (const match of matches) {
+        const label = match[1].toUpperCase();
+
+        // 根据匹配组数决定如何组合文本
+        let description = '';
+        if (match.length > 3 && match[3]) {
+          // 有三个组：label, title, description
+          description = match[2].trim() + ': ' + match[3].trim();
+        } else if (match.length > 2 && match[2]) {
+          // 只有两个组：label, text
+          description = match[2].trim();
+        }
+
+        // 清理多余的星号和空格
+        description = description.replace(/\*+/g, '').trim();
+
+        console.log(`提取到选项: ${label} - ${description}`);
+
+        // 检查是否已经存在相同标签的选项
+        if (!options.find(opt => opt.label === label)) {
+          options.push({
+            label: label,
+            text: description,
+            description: description,
+            icon: '✨'
+          });
+        }
+      }
+    }
+
+    console.log('最终提取的选项:', options);
+    return options;
+  },
+  
   // 隐藏Coze故事
   hideCozeStory() {
     this.setData({
       showCozeStory: false
     });
   },
-
+  
   // 保存梦境
   async saveDream() {
     if (!this.data.isAnalyzed || !this.data.analysisResult) {
@@ -265,12 +525,12 @@ Page({
       });
       return;
     }
-
+    
     wx.showLoading({
       title: '保存中...',
       mask: true
     });
-
+    
     try {
       const dreamData = {
         content: this.data.dreamText,
@@ -286,10 +546,10 @@ Page({
         storyData: this.data.storyData,
         conversationId: this.data.conversationId
       };
-
+      
       // 保存到云数据库
       await saveDream(dreamData);
-
+      
       wx.hideLoading();
       
       wx.showToast({
@@ -297,12 +557,11 @@ Page({
         icon: 'success',
         duration: 2000
       });
-
+      
       // 刷新最近梦境列表
       setTimeout(() => {
         this.loadRecentDreams();
       }, 500);
-
     } catch (error) {
       console.error('保存失败:', error);
       wx.hideLoading();
@@ -314,7 +573,7 @@ Page({
       });
     }
   },
-
+  
   // 加载最近梦境
   async loadRecentDreams() {
     try {
@@ -335,7 +594,7 @@ Page({
       console.error('加载最近梦境失败:', error);
     }
   },
-
+  
   // 查看梦境详情
   viewDream(e) {
     const id = e.currentTarget.dataset.id;
@@ -343,21 +602,21 @@ Page({
       url: `/pages/dreams/detail/detail?id=${id}`
     });
   },
-
+  
   // 跳转到宇宙地图
   goToMap() {
     wx.navigateTo({
       url: '/pages/universe/map/map'
     });
   },
-
+  
   // 跳转到统计页面
   goToAnalytics() {
     wx.navigateTo({
       url: '/pages/analytics/analytics'
     });
   },
-
+  
   // 语音录制相关方法（保持原有实现）
   startRecordingPress(e) {
     if (this.data.isRecording) return;
@@ -391,13 +650,13 @@ Page({
       }
     });
   },
-
+  
   stopRecordingPress() {
     if (!this.data.isRecording) return;
     this.setData({ isLongPressRecording: false, showRecordOverlay: false });
     this.stopRecording();
   },
-
+  
   onRecordingTouchMove(e) {
     if (!this.data.isRecording) return;
     const currentY = e.touches && e.touches[0]?.clientY;
@@ -410,7 +669,7 @@ Page({
       this.setData({ cancelSlide: shouldCancel });
     }
   },
-
+  
   startRecording() {
     const recorderManager = wx.getRecorderManager();
     
@@ -427,7 +686,7 @@ Page({
         duration: 1000
       });
     });
-
+    
     recorderManager.onStop((res) => {
       console.log('录音结束', res);
       this.setData({
@@ -444,7 +703,7 @@ Page({
       wx.showToast({ title: '录音完成', icon: 'success', duration: 1200 });
       this.performVoiceRecognition(res.tempFilePath);
     });
-
+    
     recorderManager.onError((err) => {
       console.error('录音错误:', err);
       this.setData({ isRecording: false });
@@ -454,7 +713,7 @@ Page({
         icon: 'none'
       });
     });
-
+    
     recorderManager.start({
       duration: 60000,
       sampleRate: 16000,
@@ -462,16 +721,16 @@ Page({
       encodeBitRate: 96000,
       format: 'mp3'
     });
-
+    
     this.recorderManager = recorderManager;
   },
-
+  
   stopRecording() {
     if (this.recorderManager) {
       this.recorderManager.stop();
     }
   },
-
+  
   startRecordingTimer() {
     this.data.recordingTimer = setInterval(() => {
       this.setData({
@@ -479,25 +738,25 @@ Page({
       });
     }, 1000);
   },
-
+  
   stopRecordingTimer() {
     if (this.data.recordingTimer) {
       clearInterval(this.data.recordingTimer);
       this.data.recordingTimer = null;
     }
   },
-
+  
   async performVoiceRecognition(filePath) {
     wx.showLoading({
       title: '识别中...',
       mask: true
     });
-
+    
     try {
       const result = await wx.cloud.getTempFileURL({
         fileList: [filePath]
       });
-
+      
       if (result.fileList && result.fileList[0]) {
         const tempFileURL = result.fileList[0].tempFileURL;
         console.log('语音文件URL:', tempFileURL);
@@ -542,7 +801,7 @@ Page({
       });
     }
   },
-
+  
   togglePlay() {
     if (this.data.isPlaying) {
       this.stopPlayAudio();
@@ -550,7 +809,7 @@ Page({
       this.playAudio();
     }
   },
-
+  
   playAudio() {
     if (!this.data.audioPath) return;
     
@@ -579,7 +838,7 @@ Page({
     innerAudioContext.play();
     this.audioContext = innerAudioContext;
   },
-
+  
   stopPlayAudio() {
     if (this.audioContext) {
       this.audioContext.stop();
@@ -588,7 +847,7 @@ Page({
     }
     this.setData({ isPlaying: false });
   },
-
+  
   deleteRecording() {
     wx.showModal({
       title: '确认删除',
@@ -609,167 +868,7 @@ Page({
       }
     });
   },
-
-// 手动输入选项 - 处理输入
-onOptionInput(e) {
-  const inputValue = e.detail.value.trim().toUpperCase();
-  console.log('用户输入选项:', inputValue);
   
-  // 验证输入是否为有效的选项（A/B/C/D）
-  const validOptions = ['A', 'B', 'C', 'D'];
-  const isValid = validOptions.includes(inputValue);
-  
-  if (!isValid && inputValue) {
-    console.warn('无效的选项输入:', inputValue);
-    // 可以添加震动反馈
-    wx.vibrateShort({
-      type: 'light'
-    });
-  }
-  
-  this.setData({
-    optionInput: inputValue
-  });
-},
-
-// 手动输入选项 - 提交
-submitOption() {
-  const optionInput = this.data.optionInput ? this.data.optionInput.trim().toUpperCase() : '';
-  
-  if (!optionInput) {
-    console.warn('选项输入为空');
-    wx.showToast({
-      title: '请输入选项（A/B/C/D）',
-      icon: 'none'
-    });
-    return;
-  }
-  
-  // 验证输入是否为有效的选项
-  const validOptions = ['A', 'B', 'C', 'D'];
-  if (!validOptions.includes(optionInput)) {
-    console.warn('无效的选项:', optionInput);
-    wx.showToast({
-      title: '请输入有效选项（A/B/C/D）',
-      icon: 'none'
-    });
-    return;
-  }
-  
-  console.log('用户提交选项:', optionInput);
-  
-  // 清空输入框
-  this.setData({
-    optionInput: ''
-  });
-  
-  // 继续故事
-  this.continueCozeStory(optionInput);
-}
-,
-
-// 选择分支选项
-selectCozeOption(e) {
-  const selectedIndex = e.currentTarget.dataset.index;
-  const selectedOption = this.data.cozeOptions[selectedIndex];
-  const selectedLabel = selectedOption.label;
-  
-  console.log('用户选择了选项:', selectedLabel, selectedOption);
-  
-  // 显示加载状态
-  wx.showLoading({
-    title: '正在穿越平行宇宙...',
-    mask: true
-  });
-  
-  // 添加到对话历史
-  const conversationHistory = this.data.cozeConversationHistory || [];
-  conversationHistory.push({
-    role: 'user',
-    content: selectedLabel
-  });
-  
-  this.setData({
-    cozeConversationHistory: conversationHistory
-  });
-  
-  // 继续故事
-  this.continueCozeStory(selectedLabel);
-},
-
-// 继续平行宇宙故事
-async continueCozeStory(selection) {
-  try {
-    console.log('继续平行宇宙故事，选择:', selection);
-    
-    // 调用Coze API继续故事
-    const result = await analyzeDream(
-      selection,
-      false, // 不是首次分析
-      'story', // 故事模式
-      this.data.cozeConversationHistory || []
-    );
-    
-    console.log('继续故事返回结果:', result);
-    
-    // 解析新的响应
-    const parsedResponse = parseCozeResponse(result.rawCozeResponse || '', 'story');
-    
-    console.log('解析后的响应:', parsedResponse);
-    
-    // 构建新的分支选项
-    let newOptions = [];
-    if (parsedResponse && parsedResponse.branchOptions && parsedResponse.branchOptions.length > 0) {
-      newOptions = parsedResponse.branchOptions.map(opt => ({
-        label: opt.label,
-        text: opt.text,
-        icon: opt.icon || '✨'
-      }));
-    }
-    
-    console.log('新的分支选项:', newOptions);
-    
-    // 添加到对话历史
-    const conversationHistory = this.data.cozeConversationHistory || [];
-    conversationHistory.push({
-      role: 'user',
-      content: selection
-    });
-    conversationHistory.push({
-      role: 'assistant',
-      content: result.rawCozeResponse || ''
-    });
-    
-    // 更新页面数据
-    this.setData({
-      cozeStoryContent: parsedResponse?.storyContent || result.rawCozeResponse || '',
-      cozeOptions: newOptions,
-      currentRound: (parsedResponse?.roundInfo?.current || this.data.currentRound || 0) + 1,
-      totalRounds: parsedResponse?.roundInfo?.total || this.data.totalRounds || 5,
-      hasBranchOptions: newOptions.length > 0,
-      isFinalRound: parsedResponse?.isCompleted || false,
-      cozeConversationHistory: conversationHistory
-    });
-    
-    wx.hideLoading();
-    
-    // 滚动到底部
-    wx.pageScrollTo({
-      scrollTop: 9999,
-      duration: 300
-    });
-    
-  } catch (error) {
-    console.error('继续故事失败:', error);
-    wx.hideLoading();
-    wx.showToast({
-      title: '平行宇宙连接失败',
-      icon: 'none'
-    });
-  }
-},
-
-
   addTemplate() {
     wx.showActionSheet({
       itemList: [

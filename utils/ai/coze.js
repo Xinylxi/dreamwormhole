@@ -63,19 +63,42 @@ function chatWithCoze(message, userId = null) {
 }
 
 /**
- * 分析梦境内容
- * @param {string} dreamContent - 梦境内容
+ * 分析梦境内容（支持会话ID和故事模式）
+ * @param {string} dreamContent - 梦境内容或用户选择
  * @param {boolean} [isShort=false] - 是否为短句分析
+ * @param {string} [mode='analysis'] - 模式（'analysis'普通分析，'story'平行宇宙故事）
+ * @param {Array} [conversationHistory=[]] - 对话历史（可选）
+ * @param {string} [conversationId=null] - 会话ID（用于保持对话上下文）
  * @returns {Promise} 返回分析结果
  */
-async function analyzeDream(dreamContent, isShort = false) {
+async function analyzeDream(dreamContent, isShort = false, mode = 'analysis', conversationHistory = [], conversationId = null) {
   try {
     console.log('开始分析梦境:', dreamContent);
+    console.log('📝 模式:', mode);
+    console.log('📝 会话ID:', conversationId);
+    console.log('📝 对话历史长度:', conversationHistory.length);
     
-    // 直接传递梦境内容，让 Coze 机器人使用自己的提示词进行分析
-    const message = `梦境内容：${dreamContent}`;
+    // 根据模式构建不同的消息
+    let message;
+    if (mode === 'story') {
+      // 故事模式：传递完整的对话历史以保持上下文
+      if (conversationHistory.length > 0) {
+        // 如果有对话历史，构建上下文消息
+        const historyText = conversationHistory.map(msg => {
+          return `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`;
+        }).join('\n\n');
+        
+        message = `对话历史：\n${historyText}\n\n用户最新选择：${dreamContent}`;
+      } else {
+        // 第一轮：直接传递梦境内容
+        message = `梦境内容：${dreamContent}`;
+      }
+    } else {
+      // 普通分析模式
+      message = `梦境内容：${dreamContent}`;
+    }
     
-    const response = await chatWithCoze(message);
+    const response = await chatWithCoze(message, conversationId);
     console.log('收到Coze分析响应:', response);
     
     if (!response || !response.content) {

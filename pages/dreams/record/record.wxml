@@ -1,19 +1,19 @@
 <!--index.wxml - 梦境虫洞：梦境记录-->
 <navigation-bar title="梦境虫洞" back="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack"></navigation-bar>
-
 <scroll-view class="scrollarea" scroll-y type="list">
   <!-- 欢迎区域 -->
   <view class="hero-section">
     <view class="hero-title">记录你的梦境</view>
     <view class="hero-subtitle">探索平行时空的扭曲</view>
   </view>
-
+  
   <!-- 快速记录卡片 -->
   <view class="record-card">
     <view class="record-header">
       <view class="record-icon">🌌</view>
       <view class="record-title">记录你的梦境...</view>
     </view>
+    
     <!-- 输入区域 -->
     <view class="input-area">
       <textarea 
@@ -26,7 +26,7 @@
       ></textarea>
       <view class="char-count">{{dreamText.length}}/500</view>
     </view>
-
+    
     <!-- 核心操作：语音输入按钮（移动到文本框下方） -->
     <view class="primary-action">
       <!-- 录音状态显示 -->
@@ -47,7 +47,7 @@
           <text class="recording-duration">录音时长: {{recordingDuration}}s</text>
         </view>
         <view class="recording-controls">
-          <button class="play-btn {{isPlaying ? 'playing' : ''}}" bindtap="{{isPlaying ? 'stopPlayback' : 'playRecording'}}">
+          <button class="play-btn {{isPlaying ? 'playing' : ''}}" bindtap="togglePlay">
             <text class="btn-icon">{{isPlaying ? '⏸️' : '▶️'}}</text>
             <text>{{isPlaying ? '暂停' : '播放'}}</text>
           </button>
@@ -66,7 +66,7 @@
         bindtouchstart="startRecordingPress"
         bindtouchmove="onRecordingTouchMove"
         bindtouchend="stopRecordingPress"
-        bindtouchcancel="cancelRecordingPress"
+        bindtouchcancel="stopRecordingPress"
       >
         <view class="voice-icon-large">🎤</view>
         <view class="voice-labels">
@@ -74,17 +74,17 @@
           <text class="voice-hint">松开完成录音</text>
         </view>
       </button>
-
+      
       <!-- 录音浮层提示 -->
       <view class="record-overlay {{cancelSlide ? 'danger' : ''}}" wx:if="{{showRecordOverlay}}">
         <text class="overlay-icon">{{cancelSlide ? '⬆️' : '🎙️'}}</text>
         <text class="overlay-text">{{cancelSlide ? '上滑取消' : '松开完成'}}</text>
       </view>
     </view>
-
+    
     <!-- 顶部工具栏：编辑操作 -->
     <view class="toolbar-top">
-      <view class="toolbar-btn template-btn" bindtap="addTextTemplate" hover-class="toolbar-btn-hover">
+      <view class="toolbar-btn template-btn" bindtap="addTemplate" hover-class="toolbar-btn-hover">
         <text class="btn-icon">📋</text>
         <text class="btn-text">添加模板</text>
       </view>
@@ -97,7 +97,7 @@
         <text class="btn-text">保存</text>
       </view>
     </view>
-
+    
     <!-- 情绪标签预览 -->
     <view class="tags-preview" wx:if="{{emotionTags.length > 0}}">
       <view class="tags-title">情绪分析</view>
@@ -110,6 +110,7 @@
           <text class="tag-value">{{item.value}}%</text>
         </view>
       </view>
+      
       <view class="analysis-result" wx:if="{{analysisResult}}">
         <view class="result-planet">
           <text class="planet-emoji">{{analysisResult.planetEmoji}}</text>
@@ -121,14 +122,13 @@
         <view class="result-interpretation">{{analysisResult.interpretation}}</view>
       </view>
     </view>
-
   </view>
-
+  
   <!-- 最近梦境 -->
   <view class="recent-section">
     <view class="section-header">
       <text class="section-title">最近梦境</text>
-      <button class="section-link-btn" bindtap="goToUniverse" hover-class="section-link-btn-hover" type="default" plain="true">
+      <button class="section-link-btn" bindtap="goToMap" hover-class="section-link-btn-hover" type="default" plain="true">
         <text>查看宇宙地图 →</text>
       </button>
     </view>
@@ -136,9 +136,9 @@
     <view class="dream-list" wx:if="{{recentDreams.length > 0}}">
       <view class="dream-item" 
             wx:for="{{recentDreams}}" 
-            wx:key="id" 
-            bindtap="viewDreamDetail" 
-            data-id="{{item.id}}"
+            wx:key="_id" 
+            bindtap="viewDream" 
+            data-id="{{item._id}}"
             data-index="{{index}}">
         
         <!-- 梦境头部信息 -->
@@ -169,29 +169,24 @@
       <text class="empty-hint">开始记录你的第一个梦境吧</text>
     </view>
   </view>
-
+  
   <!-- 互动功能 -->
   <view class="interaction-section">
     <view class="section-header">
       <text class="section-title">时空穿梭</text>
-    </view>    <view class="interaction-card" bindtap="goToAnalytics">
+    </view>
+    
+    <view class="interaction-card" bindtap="goToAnalytics">
       <view class="interaction-icon">📊</view>
       <view class="interaction-content">
         <view class="interaction-title">梦境统计</view>
         <view class="interaction-desc">查看梦境数据分析和趋势图表</view>
       </view>
       <view class="interaction-arrow">→</view>
-    </view>    <view class="interaction-card" bindtap="startDreamGuidance">
-      <view class="inteiiiiraction-icon">🚀</view>
-      <view class="interaction-content">
-        <view class="interaction-title">AI梦境引导</view>
-        <view class="interaction-desc">告诉AI你想做什么梦，睡前获得语音引导</view>
-      </view>
-      <view class="interaction-arrow">→</view>
     </view>
   </view>
-
-  <!-- Coze平行宇宙故事展示区域 -->
+  
+  <!-- Coze平行宇宙故事展示区域 - 优化版 -->
   <view class="coze-story-section" wx:if="{{showCozeStory && cozeStoryContent}}">
     <!-- 故事头部 -->
     <view class="coze-story-header">
@@ -204,33 +199,66 @@
       </view>
     </view>
     
-    <!-- 故事内容 -->
+    <!-- 结构化故事内容 -->
     <view class="coze-story-content">
+      <!-- 轮次显示 -->
+      <view class="round-badge" wx:if="{{currentRound > 0}}">
+        <text class="round-text">第 {{currentRound}} 轮</text>
+      </view>
+      
+      <!-- 情绪指数显示 -->
+      <view class="emotion-score-display" wx:if="{{currentEmotionScore > 0}}">
+        <view class="emotion-score-label">情绪指数</view>
+        <view class="emotion-score-value">{{currentEmotionScore}}%</view>
+        <view class="emotion-score-bar">
+          <view class="emotion-score-fill" style="width: {{currentEmotionScore}}%"></view>
+        </view>
+      </view>
+      
+      <!-- 故事文本内容 -->
       <text class="story-text" user-select>{{cozeStoryContent}}</text>
     </view>
     
-    <!-- 分支选项容器 -->
-        <!-- 手动输入选项区域 -->
-    <!-- Coze分支选项 - 点击式 -->
-    <view class="coze-options-container" wx:if="{{hasBranchOptions && !isFinalRound}}">
+    <!-- 关键词标签 -->
+    <view class="keywords-display" wx:if="{{keywords.length > 0}}">
+      <text class="keywords-label">关键词：</text>
+      <view class="keywords-list">
+        <text class="keyword-tag" wx:for="{{keywords}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+    
+    <!-- 加载中状态 -->
+    <view class="loading-state" wx:if="{{isAnalyzingChoice}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">AI正在分析，请稍候...</text>
+    </view>
+    
+    <!-- Coze分支选项 - 简洁版ABCD按钮 -->
+    <view class="coze-options-container" wx:if="{{hasBranchOptions && !isFinalRound && cozeOptions.length > 0 && !isAnalyzingChoice}}">
       <view class="options-title">请选择一个选项继续平行宇宙之旅：</view>
       
-      <view class="branch-options">
-        <block wx:for="{{cozeOptions}}" wx:key="index">
-          <view 
-            class="branch-option-item" 
+      <!-- 四个ABCD按钮 -->
+      <view class="abcd-buttons">
+        <block wx:for="{{cozeOptions}}" wx:for-item="optionItem" wx:key="label">
+          <button 
+            class="abcd-btn" 
             bindtap="selectCozeOption" 
             data-index="{{index}}"
-            data-label="{{item.label}}"
-            hover-class="option-hover"
+            data-label="{{optionItem.label}}"
+            hover-class="abcd-btn-hover"
+            disabled="{{isAnalyzing}}"
           >
-            <view class="option-header">
-              <view class="option-badge">{{item.label}}</view>
-              <view class="option-icon">→</view>
-            </view>
-            <view class="option-content">
-              <text class="option-text">{{item.description}}</text>
-            </view>
+            {{optionItem.label}}
+          </button>
+        </block>
+      </view>
+      
+      <!-- 选项描述 -->
+      <view class="options-descriptions">
+        <block wx:for="{{cozeOptions}}" wx:for-item="optionItem" wx:key="label">
+          <view class="option-desc-item">
+            <text class="option-desc-label">{{optionItem.label}}:</text>
+            <text class="option-desc-text">{{optionItem.description}}</text>
           </view>
         </block>
       </view>
@@ -241,5 +269,4 @@
       <text class="footer-text">梦境是平行时空的扭曲，每一次选择都是最好的</text>
     </view>
   </view>
-
 </scroll-view>

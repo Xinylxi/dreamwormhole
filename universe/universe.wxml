@@ -1,0 +1,174 @@
+<!--universe.wxml - 二维宇宙地图：梦境可视化-->
+<navigation-bar title="宇宙地图" back="{{true}}" homeButton="{{true}}" color="#fff" background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" bind:back="onBack" bind:home="goToHome"></navigation-bar>
+
+<!-- 顶部工具栏 -->
+<view class="toolbar">
+  <!-- 搜索框 -->
+  <view class="search-container" wx:if="{{showSearch}}">
+    <input class="search-input" 
+           placeholder="搜索星球名称、主题、标签..." 
+           value="{{searchKeyword}}"
+           bindinput="onSearchInput"
+           confirm-type="search" />
+    <view class="search-close" bindtap="onClearSearch" wx:if="{{searchKeyword}}">✕</view>
+  </view>
+  
+  <!-- 工具栏按钮 -->
+  <view class="toolbar-actions">
+    <button class="toolbar-btn {{showSearch ? 'active' : ''}}" bindtap="onToggleSearch" type="default" plain="true">
+      <text class="btn-icon">🔍</text>
+      <text>{{showSearch ? '收起' : '搜索'}}</text>
+    </button>
+    <button class="toolbar-btn" bindtap="onSortChange" data-sort="{{sortBy === 'time' ? 'count' : 'time'}}" type="default" plain="true">
+      <text class="btn-icon">{{sortBy === 'time' ? '📊' : '🕐'}}</text>
+      <text>{{sortBy === 'time' ? '按数量' : '按时间'}}</text>
+    </button>
+    <button class="toolbar-btn home-btn" bindtap="goToHome" type="default" plain="true">
+      <text class="btn-icon">🏠</text>
+      <text>主页</text>
+    </button>
+  </view>
+  
+  <!-- 分类标签 -->
+  <scroll-view class="category-scroll" scroll-x>
+    <view class="category-list">
+      <view class="category-item {{selectedCategory === item ? 'active' : ''}}"
+            wx:for="{{categories}}" 
+            wx:key="*this"
+            bindtap="onCategoryChange"
+            data-category="{{item}}">
+        {{item}}
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 时间筛选 -->
+  <view class="time-filter">
+    <view class="time-item {{timeFilter === item ? 'active' : ''}}"
+          wx:for="{{['全部', '今天', '本周', '本月', '更早']}}" 
+          wx:key="*this"
+          bindtap="onTimeFilterChange"
+          data-filter="{{item}}">
+      {{item}}
+    </view>
+  </view>
+</view>
+<view class="scrollarea">
+  <!-- 二维宇宙容器（可拖拽平移舞台） -->
+  <view class="universe-container">
+  <view class="universe-stage">
+      <!-- 宇宙背景 -->
+      <view class="cosmic-background">
+        <!-- 星空背景 -->
+        <view class="starfield">
+          <view class="star" wx:for="{{stars}}" wx:key="index" 
+                style="left: {{item.x}}%; top: {{item.y}}%; animation-delay: {{item.delay}}s;"></view>
+        </view>
+        
+        <!-- 星云效果 -->
+        <view class="nebula nebula-1"></view>
+        <view class="nebula nebula-2"></view>
+        <view class="nebula nebula-3"></view>
+      </view>
+      
+      <!-- 星球网格布局 -->
+      <view class="planets-grid">
+        <view class="planet-item {{selectedPlanet && selectedPlanet.id === item.id ? 'selected' : ''}}" 
+              wx:for="{{filteredPlanets}}" 
+              wx:key="id"
+              catchtouchstart="onPlanetDragStart"
+              catchtouchmove="onPlanetDragMove"
+              catchtouchend="onPlanetDragEnd"
+              catchtouchcancel="onPlanetDragEnd"
+              bindtap="onPlanetClick"
+              data-planet="{{item}}"
+              data-id="{{item.id}}"
+              style="left: {{item.x}}%; top: {{item.y}}%;">
+          
+          <!-- 星球主体 -->
+          <view class="planet-body" 
+                style="background: {{item.color}}; transform: scale({{item.scale}});">
+            <view class="planet-surface" wx:if="{{item.surface}}"></view>
+            <view class="planet-atmosphere" wx:if="{{item.atmosphere}}"></view>
+            <view class="planet-glow" wx:if="{{item.glow}}"></view>
+          </view>
+          
+          <!-- 星球名称 -->
+          <view class="planet-name">{{item.name}}</view>
+          
+          <!-- 星球信息 -->
+          <view class="planet-info">
+            <view class="planet-dreams">{{item.dreamCount}}个梦境</view>
+            <view class="planet-tags">
+              <text class="planet-tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+            </view>
+          </view>
+          
+          <!-- 点击提示 -->
+          <view class="planet-hint">点击探索</view>
+        </view>
+      </view>
+      
+      <!-- 连接线 -->
+      <view class="connections">
+        <view class="connection-line" 
+              wx:for="{{connections}}" 
+              wx:key="index"
+              style="left: {{item.fromX}}%; top: {{item.fromY}}%; width: {{item.length}}%; transform: rotate({{item.angle}}deg); opacity: {{0.2 + item.strength * 0.3}};"></view>
+      </view>
+      
+      <!-- 中心焦点 -->
+      <view class="center-focus" wx:if="{{centerPlanet}}">
+        <view class="focus-ring"></view>
+        <view class="focus-glow"></view>
+      </view>
+    </view>
+  </view>
+
+  
+  <!-- 底部信息面板 -->
+  <view class="info-panel">
+    <view class="panel-header">
+      <text class="panel-title">梦境宇宙</text>
+      <text class="panel-stats">显示{{filteredPlanets.length}}/{{planetCount}}个星球，{{totalDreams}}个梦境</text>
+    </view>
+    
+    <view class="panel-content">
+      <view class="selected-planet" wx:if="{{selectedPlanet}}">
+        <view class="planet-preview">
+          <view class="preview-icon">{{selectedPlanet.emoji}}</view>
+          <view class="preview-info">
+            <text class="preview-name">{{selectedPlanet.name}}</text>
+            <text class="preview-desc">{{selectedPlanet.description}}</text>
+          </view>
+        </view>
+        
+        <view class="planet-details">
+          <view class="detail-item">
+            <text class="detail-label">梦境数量</text>
+            <text class="detail-value">{{selectedPlanet.dreamCount}}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">创建时间</text>
+            <text class="detail-value">{{selectedPlanet.createTime}}</text>
+          </view>
+          <view class="detail-item">
+            <text class="detail-label">主要标签</text>
+            <text class="detail-value">{{selectedPlanet.mainTag}}</text>
+          </view>
+        </view>
+        
+        <button class="explore-btn" bindtap="explorePlanet" data-planet="{{selectedPlanet}}">
+          <text class="btn-icon">🚀</text>
+          <text>探索星球</text>
+        </button>
+      </view>
+      
+      <view class="empty-selection" wx:else>
+        <text class="empty-icon">🌌</text>
+        <text class="empty-text">选择一个星球开始探索</text>
+        <text class="empty-hint">点击任意星球查看详情</text>
+      </view>
+    </view>
+  </view>
+</view>
